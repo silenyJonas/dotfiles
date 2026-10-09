@@ -11,23 +11,20 @@
 
   /* === Modules Order === */
   "modules-left": [
-    "custom/archicon",
-    "clock",
     "cpu",
     "memory",
-    "temperature"
+    "temperature",
+    "battery",
+    "network"
   ],
   "modules-center": [
-    "hyprland/workspaces"
+    "clock"
   ],
   "modules-right": [
     "backlight",
     "pulseaudio",
-    "battery",
-    "network",
     "custom/brave",
     "custom/spotify",
-    "custom/spf",
     "custom/codium",
     "custom/discord",
     "disk",
@@ -176,7 +173,7 @@
     "format": "",
     "tooltip": true,
     "tooltip-format": "Spustit Spotify",
-    "on-click": "(env GDK_BACKEND=wayland snap run spotify &) & disown"
+    "on-click": "snap run spotify --force-device-scale-factor=2"
   },
   "custom/spf": {
     "format": "",
@@ -187,8 +184,8 @@
   "custom/codium": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit VSCodium ($HOME/programming_projects)",
-    "on-click": "codium $HOME/programming_projects & disown"
+    "tooltip-format": "Spustit VSCodium",
+    "on-click": "codium --ozone-platform=wayland"
   },
   "custom/discord": {
     "format": "",

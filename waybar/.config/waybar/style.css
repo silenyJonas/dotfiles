@@ -1,256 +1,205 @@
-/* -- Global rules -- */
+/*
+ * Waybar: tři samostatné "ostrůvky" (vlevo, uprostřed, vpravo)
+ * s tmavým poloprůhledným pozadím. Moduly a jejich pořadí se nemění,
+ * ty určuje config.jsonc.
+ */
+
+/* === Barvy (stačí měnit tady) === */
+@define-color island        rgba(10, 30, 44, 0.80);    /* pozadí ostrůvku, poslední číslo = průhlednost */
+@define-color island_border rgba(125, 190, 220, 0.25); /* tenký okraj ostrůvku */
+@define-color fg            #dbe7ee;                   /* text a ikony */
+@define-color fg_dim        #7f97a5;                   /* neaktivní / ztlumené */
+@define-color hover         rgba(255, 255, 255, 0.10); /* podsvícení pod myší */
+@define-color pill          #e6eef2;                   /* světlá pilulka (tlačítko vypnutí) */
+@define-color pill_fg       #0a1e2c;
+@define-color good          #a3be8c;
+@define-color warn          #ebcb8b;
+@define-color bad           #bf616a;
+
+/* === Základ === */
 * {
   border: none;
   font-family: "JetbrainsMono Nerd Font";
   font-size: 13px;
-  min-height: 10px;
+  min-height: 0;
 }
 
 window#waybar {
-  background: rgba(34, 36, 54, 0.0); 
+  background: transparent;
+  color: @fg;
 }
 
 window#waybar.hidden {
   opacity: 0.2;
 }
 
+/* === Ostrůvky === */
+.modules-left,
+.modules-center,
+.modules-right {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 16px;
+  margin: 6px 0 2px 0;
+  padding: 3px 5px;
+}
 
-/* - Genera rules for visible modules -- */
+.modules-left {
+  margin-left: 10px;
+}
+
+.modules-right {
+  margin-right: 10px;
+}
+
+/*
+ * Stejná šířka levého a pravého ostrůvku.
+ * Číslo musí být o něco větší než nejširší obsah z obou stran:
+ *   - jedna strana je širší než druhá      -> číslo zvětši
+ *   - uvnitř je u středu moc prázdného místa -> číslo zmenši
+ */
+.modules-left,
+.modules-right {
+  min-width: 376px;
+}
+
+/* === Moduly uvnitř ostrůvků === */
 #custom-archicon,
 #clock,
 #cpu,
 #memory,
+#temperature,
+#backlight,
 #pulseaudio,
-#pulseaudio_slider,
-#backlight, 
 #battery,
-#network, 
-#language,
-#bluetooth,
-#custom-power,
-#disk,
+#network,
 #custom-brave,
-#custom-discord,
 #custom-spotify,
-#custom-codium,
 #custom-spf,
-#temperature { 
-  color: #D8DEE9; 
-  margin-top: 6px;
-  margin-bottom: 6px;
-  /* Výchozí paddingy */
-  padding-left: 10px;
-  padding-right: 10px;
-  transition: none;
-  background: #2e3440; 
-  /* Výchozí Separátor (box-shadow) je zde, ale bude přepsán */
-  box-shadow: inset 2px 0 0 rgba(216, 222, 233, 0.1); 
-  border-radius: 0; /* Všechny rohy na 0 jako výchozí */
+#custom-codium,
+#custom-discord,
+#disk,
+#bluetooth,
+#custom-power {
+  color: @fg;
+  background: transparent;
+  border-radius: 11px;
+  margin: 0 1px;
+  padding: 3px 9px;
+  transition: background 150ms ease, color 150ms ease;
 }
 
-/* --- LOGIKA ODDĚLENÍ A ZAOBELNÍ --- */
+/* Větší mezera před začátkem každé skupiny (stejné skupiny jako dřív) */
+#battery,
+#custom-brave,
+#disk {
+  margin-left: 9px;
+}
 
-/* --- BLOK 1: ARCH ICON + CLOCK (Levý blok) --- */
+/* Srdíčko vlevo */
 #custom-archicon {
-  margin-left: 5px; 
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  box-shadow: none;
-}
-#temperature {
-  margin-left: 5px; 
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
-  box-shadow: none;
+  font-size: 18px;
+  padding: 0 13px 0 4px;
 }
 
-/* Oprava: brave by neměl být v BLOKU 1, ale vpravo u BLOKU 4, ale zachováme jeho aktuální pozici v kódu, jen upravíme zaoblení. */
-#custom-brave{
-  margin-left: 5px; 
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  box-shadow: none;
-}
-#custom-discord{
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-}
-#clock {
-  margin-right: 5px; /* Mezera 5px od dalšího bloku */
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  box-shadow: none; /* Konec bloku, žádný stín */
-}
-
-/* --- BLOK 2: CPU + RAM --- */
-#cpu {
-  margin-left: 5px; /* Mezera 5px od předchozího bloku */
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  box-shadow: none; /* Začátek bloku, žádný stín */
-}
-#memory {
-  margin-right: 5px; /* Mezera 5px od dalšího bloku */
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-}
-
-/* --- BLOK 3: WORKSPACES (Uprostřed) --- */
-#workspaces { 
-  background: rgba(34, 36, 54, 0.5); 
-  border-radius: 10px;
-  margin: 6px 5px;
-  padding: 0px 6px;
-  box-shadow: none;
+/* === Plochy (uprostřed) === */
+#workspaces {
+  margin: 0;
+  padding: 0 2px;
 }
 
 #workspaces button {
-  color: #D8DEE9; 
+  color: @fg_dim;
   background: transparent;
-  padding: 4px 4px;
+  border-radius: 10px;
+  padding: 2px 5px;
+  min-width: 0;
+  box-shadow: none;
+  text-shadow: none;
+  transition: background 150ms ease, color 150ms ease;
 }
 
-#workspaces button.occupied {
-  color: #ABB0BA; 
+#workspaces button.empty {
+  color: alpha(@fg_dim, 0.55);
 }
 
 #workspaces button.active {
-  color: #7a7d84; 
-  text-shadow: 0 0 4px #7a7d84;
+  color: @fg;
 }
 
-/* Monochromatický hover pro Workspaces */
+#workspaces button.urgent {
+  color: @bad;
+}
+
 #workspaces button:hover {
-  color: #D8DEE9; /* Světlá barva */
-  background: rgba(216, 222, 233, 0.15); /* Jemné šedé pozadí */
-}
-
-/* --- BLOK 4: PRAVÝ BLOK (Backlight až Power) --- */
-
-/* Začátek bloku 4: Backlight (Jas) */
-#backlight { 
-  margin-left: 5px; /* Mezera 5px od bloku 3 */
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
+  color: @fg;
+  background: @hover;
   box-shadow: none;
+  text-shadow: none;
 }
 
-/* Konec bloku 4: Custom/Power */
-#custom-power {
-  margin-right: 5px; /* Úplně pravý okraj (Mezera od okraje obrazovky) */
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  box-shadow: none;
-}
-
-
-/* --- SPECIÁLNÍ ÚPRAVY PRO DISK A NETWORK --- */
-
-/* Zajištění, že Disk a Network jsou vizuálně odděleny mezerou 5px, jako ostatní bloky */
-#disk {
-    /* Zaoblení na levé straně */
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-    /* Žádný box-shadow */
-    box-shadow: none;
-    /* Oddělení od Network (WiFi) */
-    margin-left: 5px; /* Vytvoří mezeru 5px mezi Network a Disk */
-}
-
-#network {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-    box-shadow: none;
-    margin-right: 5px; /* Vytvoří mezeru 5px před Disk */
-}
-
-#pulseaudio,
-#battery,
-#bluetooth,
-#network,
-#memory {
-    box-shadow: inset 2px 0 0 rgba(216, 222, 233, 0.1); 
-}
-
-/* IKONA V LEVO: */
-#custom-archicon {
-  font-size: 20px;
-  color: #D8DEE9; 
-  background: #161320; 
-  padding-right: 17px;
-}
-
-#backlight,
-#battery,
-#bluetooth,
-#pulseaudio_slider,
-#pulseaudio,
-#disk,
-#cpu,
-#memory,
-#clock {
-  background: #2e3440;
-}
-
-#network {
-  background: #2e3440;
-  color: #D8DEE9;
-  padding-right: 10px; 
-}
-
-#custom-power {
-  background: #D8DEE9; 
-  color: #161320; 
-  font-size: 12.5px; 
-}
-
-#battery.charging {
-  color: #A3BE8C; 
-}
-
-#battery.critical {
-  color: #BF616A; 
-}
-
+/* === Stavy === */
+#battery.charging,
+#battery.plugged,
 #bluetooth.connected {
-  color: #A3BE8C; 
+  color: @good;
 }
 
-@keyframes blink {
-  to {
-    background-color: #BF616A; 
-    color: #D8DEE9;
-  }
+#battery.warning:not(.charging) {
+  color: @warn;
 }
 
+#battery.critical:not(.charging),
+#temperature.critical,
+#network.disconnected {
+  color: @bad;
+}
+
+#pulseaudio.muted,
+#bluetooth.disabled,
+#bluetooth.off {
+  color: @fg_dim;
+}
+
+/* === Podsvícení pod myší (jen u toho, na co se dá kliknout) === */
 #custom-archicon:hover,
 #clock:hover,
 #cpu:hover,
 #memory:hover,
 #pulseaudio:hover,
-#disk:hover,
 #network:hover,
-#bluetooth:hover,
 #custom-brave:hover,
 #custom-spotify:hover,
 #custom-spf:hover,
+#custom-codium:hover,
 #custom-discord:hover,
-#custom-codium:hover {
-  color: #D8DEE9;
-  background: rgba(216, 222, 233, 0.1);
+#disk:hover,
+#bluetooth:hover {
+  background: @hover;
 }
 
-/* === MODULY BEZ POZADÍ PŘI HOVERU === */
-#backlight:hover,
-#pulseaudio_slider:hover,
-#battery:hover {
-  color: #D8DEE9;
+/* === Tlačítko vypnutí: světlá pilulka na konci === */
+#custom-power {
+  background: @pill;
+  color: @pill_fg;
+  font-size: 12.5px;
+  margin-left: 7px;
+  padding: 3px 11px;
 }
 
-/* === KONCOVÝ MODUL: POWER (INVERTOVANÝ STYL) === */
 #custom-power:hover {
-  background: #161320;
-  color: #D8DEE9;
+  background: @bad;
+  color: @fg;
+}
+
+/* === Bubliny s nápovědou === */
+tooltip {
+  background: rgba(10, 30, 44, 0.95);
+  border: 1px solid @island_border;
+  border-radius: 10px;
+}
+
+tooltip label {
+  color: @fg;
+  padding: 2px 4px;
 }
