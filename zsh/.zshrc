@@ -12,7 +12,6 @@ alias fastfetch='clear && fastfetch'
 alias pipes="~/Apps/pipes.sh"
 alias clock='tty-clock -sbc -C 7'
 alias cmatrix='cmatrix -C white'
-alias spotify='env GDK_BACKEND=wayland snap run spotify &'
 alias firefox='nohup firefox >/dev/null 2>&1 &'
 alias postmanstart="\"$HOME/Apps/Postman Agent/app/postman-agent\" &"
 alias postmanstop="pkill -f postman-agent"
@@ -93,3 +92,8 @@ alias rofi_launcher="$HOME/.config/rofi/launchers/type-6/launcher.sh"
 
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
+
+unalias spotify 2>/dev/null
+spotify() {
+    command spotify --force-device-scale-factor=2 "$@" >/dev/null 2>&1 &!
+}

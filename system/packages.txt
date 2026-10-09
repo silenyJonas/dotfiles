@@ -519,7 +519,7 @@ realmd
 realtek-firmware
 rhythmbox
 rit-rachana-fonts
-rofi
+rofi-wayland
 rootfiles
 rpm
 rpmfusion-free-appstream-data
