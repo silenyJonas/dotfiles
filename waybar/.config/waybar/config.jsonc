@@ -1,0 +1,199 @@
+
+
+{
+  "layer": "top",
+  "position": "top",
+  "autohide": true,
+  "autohide-blocked": false,
+  "exclusive": true,
+  "passthrough": false,
+  "gtk-layer-shell": true,
+
+  /* === Modules Order === */
+  "modules-left": [
+    "custom/archicon",
+    "clock",
+    "cpu",
+    "memory",
+    "temperature"
+  ],
+  "modules-center": [
+    "hyprland/workspaces"
+  ],
+  "modules-right": [
+    "backlight",
+    "pulseaudio",
+    "battery",
+    "network",
+    "custom/brave",
+    "custom/spotify",
+    "custom/spf",
+    "custom/codium",
+    "custom/discord",
+    "disk",
+    "bluetooth",
+    "custom/power",
+    "pulseaudio_slider"
+  ],
+
+  /* === Modules Left === */
+  "custom/archicon": {
+    "format": " ♡",
+    "on-click": "wofi --show drun",
+    "tooltip": false
+  },
+  "clock": {
+    "timezone": "Europe/Prague",
+    "format": "{:%H:%M %d.%m.}",
+    "tooltip-format": "{calendar}",
+    "calendar": {
+      "mode": "month"
+    }
+  },
+  "cpu": {
+    "format": "{usage}% CPU",
+    "tooltip": true,
+    "tooltip-format": "Využití CPU: {usage}%\nJádra: {cores}",
+    "on-click": "gnome-system-monitor"
+  },
+  "memory": {
+    "format": "{}% RAM",
+    "tooltip": true,
+    "tooltip-format": "RAM v použití: {used} / {total} ({percentage}%)",
+    "on-click": "gnome-system-monitor"
+  },
+  "temperature": {
+    "hwmon-path": "/sys/class/hwmon/hwmon8/temp1_input",
+    "format": "{temperatureC}°C ",
+    "tooltip": true,
+    "tooltip-format": "CPU teplota: {temperatureC}°C",
+    "interval": 5,
+    "states": {
+      "warning": 75,
+      "critical": 90
+    },
+    "format-icons": ["", "", "", ""]
+  },
+
+  /* === Modules Center === */
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "default": "",
+      "active": ""
+    },
+    "persistent-workspaces": {
+      "*": 3
+    },
+    "disable-scroll": true,
+    "all-outputs": true,
+    "show-special": true
+  },
+
+  /* === Modules Right === */
+  "pulseaudio_slider": {
+    "format": "{volume}%",
+    "tooltip": false,
+    "on-click": "pavucontrol"
+  },
+  "pulseaudio": {
+    "format": "{volume}% {icon}",
+    "format-muted": " {format_source}",
+    "format-icons": {
+      "default": ["", ""]
+    },
+    "on-click": "pavucontrol"
+  },
+  "battery": {
+    "format": "{capacity}% {icon}",
+    "format-charging": "{capacity}% ",
+    "format-plugged": "{capacity}% ",
+    "format-alt": "{time} {icon}",
+    "format-icons": ["", "", "", "", ""],
+    "tooltip": true,
+    "tooltip-format": "Stav baterie: {capacity}%\nZbývající čas: {time}",
+    "states": {
+      "warning": 30,
+      "critical": 15
+    }
+  },
+  "bluetooth": {
+    "format": "{icon}",
+    "format-disabled": "",
+    "format-icons": {
+      "enabled": "",
+      "disabled": "",
+      "connected": ""
+    },
+    "on-click": "blueman-manager",
+    "tooltip-format": "{status}",
+    "tooltip-format-connected": " {device_alias}",
+    "tooltip-format-discovering": " Hledání...",
+    "tooltip-format-disabled": "Bluetooth vypnutý"
+  },
+  "network": {
+    "format-wifi": "({signalStrength}%) ",
+    "format-ethernet": "{ifname} 󰈀",
+    "format-disconnected": " Odpojeno",
+    "tooltip-format-wifi": " {essid} ({signalStrength}%) \nIP: {ipaddr}/{cidr}",
+    "tooltip-format-ethernet": " {ifname} {ipaddr}/{cidr}",
+    "tooltip-format-disconnected": "Odpojeno",
+    "on-click": "nm-connection-editor",
+    "max-length": 50
+  },
+  "backlight": {
+    "format": "{percent}% {icon}",
+    "format-icons": ["", "", "", "", ""],
+    "device": "intel_backlight",
+    "on-scroll-up": "brightnessctl set +5%",
+    "on-scroll-down": "brightnessctl set 5%-",
+    "tooltip": true,
+    "tooltip-format": "Jas: {percent}%"
+  },
+  "disk": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Volné místo: {free} / {total} ({percentage_free}%)",
+    "on-click": "dolphin",
+    "interval": 30,
+    "path": "/"
+  },
+  "custom/power": {
+    "format": "⏻",
+    "on-click": "$HOME/.config/rofi/powermenu/type-1/powermenu.sh",
+    "tooltip": true,
+    "tooltip-format": "Menu vypnutí"
+  },
+
+  /* --- CUSTOM LAUNCHERS --- */
+  "custom/brave": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Spustit Brave",
+    "on-click": "nohup brave-browser >/dev/null 2>&1 &"
+  },
+  "custom/spotify": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Spustit Spotify",
+    "on-click": "(env GDK_BACKEND=wayland snap run spotify &) & disown"
+  },
+  "custom/spf": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Spustit Yazi",
+    "on-click": "alacritty -e yazi"
+  },
+  "custom/codium": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Spustit VSCodium ($HOME/programming_projects)",
+    "on-click": "codium $HOME/programming_projects & disown"
+  },
+  "custom/discord": {
+    "format": "",
+    "tooltip": true,
+    "tooltip-format": "Spustit Discord",
+    "on-click": "(env ELECTRON_FORCE_DEVICE_SCALE_FACTOR=1.0 GDK_BACKEND=wayland ELECTRON_ENABLE_WAYLAND=1 flatpak run com.discordapp.Discord &) & disown"
+  }
+}

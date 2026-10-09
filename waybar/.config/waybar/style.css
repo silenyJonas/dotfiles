@@ -1,0 +1,256 @@
+/* -- Global rules -- */
+* {
+  border: none;
+  font-family: "JetbrainsMono Nerd Font";
+  font-size: 13px;
+  min-height: 10px;
+}
+
+window#waybar {
+  background: rgba(34, 36, 54, 0.0); 
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+
+/* - Genera rules for visible modules -- */
+#custom-archicon,
+#clock,
+#cpu,
+#memory,
+#pulseaudio,
+#pulseaudio_slider,
+#backlight, 
+#battery,
+#network, 
+#language,
+#bluetooth,
+#custom-power,
+#disk,
+#custom-brave,
+#custom-discord,
+#custom-spotify,
+#custom-codium,
+#custom-spf,
+#temperature { 
+  color: #D8DEE9; 
+  margin-top: 6px;
+  margin-bottom: 6px;
+  /* Výchozí paddingy */
+  padding-left: 10px;
+  padding-right: 10px;
+  transition: none;
+  background: #2e3440; 
+  /* Výchozí Separátor (box-shadow) je zde, ale bude přepsán */
+  box-shadow: inset 2px 0 0 rgba(216, 222, 233, 0.1); 
+  border-radius: 0; /* Všechny rohy na 0 jako výchozí */
+}
+
+/* --- LOGIKA ODDĚLENÍ A ZAOBELNÍ --- */
+
+/* --- BLOK 1: ARCH ICON + CLOCK (Levý blok) --- */
+#custom-archicon {
+  margin-left: 5px; 
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: none;
+}
+#temperature {
+  margin-left: 5px; 
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: none;
+}
+
+/* Oprava: brave by neměl být v BLOKU 1, ale vpravo u BLOKU 4, ale zachováme jeho aktuální pozici v kódu, jen upravíme zaoblení. */
+#custom-brave{
+  margin-left: 5px; 
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: none;
+}
+#custom-discord{
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+#clock {
+  margin-right: 5px; /* Mezera 5px od dalšího bloku */
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: none; /* Konec bloku, žádný stín */
+}
+
+/* --- BLOK 2: CPU + RAM --- */
+#cpu {
+  margin-left: 5px; /* Mezera 5px od předchozího bloku */
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: none; /* Začátek bloku, žádný stín */
+}
+#memory {
+  margin-right: 5px; /* Mezera 5px od dalšího bloku */
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* --- BLOK 3: WORKSPACES (Uprostřed) --- */
+#workspaces { 
+  background: rgba(34, 36, 54, 0.5); 
+  border-radius: 10px;
+  margin: 6px 5px;
+  padding: 0px 6px;
+  box-shadow: none;
+}
+
+#workspaces button {
+  color: #D8DEE9; 
+  background: transparent;
+  padding: 4px 4px;
+}
+
+#workspaces button.occupied {
+  color: #ABB0BA; 
+}
+
+#workspaces button.active {
+  color: #7a7d84; 
+  text-shadow: 0 0 4px #7a7d84;
+}
+
+/* Monochromatický hover pro Workspaces */
+#workspaces button:hover {
+  color: #D8DEE9; /* Světlá barva */
+  background: rgba(216, 222, 233, 0.15); /* Jemné šedé pozadí */
+}
+
+/* --- BLOK 4: PRAVÝ BLOK (Backlight až Power) --- */
+
+/* Začátek bloku 4: Backlight (Jas) */
+#backlight { 
+  margin-left: 5px; /* Mezera 5px od bloku 3 */
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: none;
+}
+
+/* Konec bloku 4: Custom/Power */
+#custom-power {
+  margin-right: 5px; /* Úplně pravý okraj (Mezera od okraje obrazovky) */
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: none;
+}
+
+
+/* --- SPECIÁLNÍ ÚPRAVY PRO DISK A NETWORK --- */
+
+/* Zajištění, že Disk a Network jsou vizuálně odděleny mezerou 5px, jako ostatní bloky */
+#disk {
+    /* Zaoblení na levé straně */
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    /* Žádný box-shadow */
+    box-shadow: none;
+    /* Oddělení od Network (WiFi) */
+    margin-left: 5px; /* Vytvoří mezeru 5px mezi Network a Disk */
+}
+
+#network {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    box-shadow: none;
+    margin-right: 5px; /* Vytvoří mezeru 5px před Disk */
+}
+
+#pulseaudio,
+#battery,
+#bluetooth,
+#network,
+#memory {
+    box-shadow: inset 2px 0 0 rgba(216, 222, 233, 0.1); 
+}
+
+/* IKONA V LEVO: */
+#custom-archicon {
+  font-size: 20px;
+  color: #D8DEE9; 
+  background: #161320; 
+  padding-right: 17px;
+}
+
+#backlight,
+#battery,
+#bluetooth,
+#pulseaudio_slider,
+#pulseaudio,
+#disk,
+#cpu,
+#memory,
+#clock {
+  background: #2e3440;
+}
+
+#network {
+  background: #2e3440;
+  color: #D8DEE9;
+  padding-right: 10px; 
+}
+
+#custom-power {
+  background: #D8DEE9; 
+  color: #161320; 
+  font-size: 12.5px; 
+}
+
+#battery.charging {
+  color: #A3BE8C; 
+}
+
+#battery.critical {
+  color: #BF616A; 
+}
+
+#bluetooth.connected {
+  color: #A3BE8C; 
+}
+
+@keyframes blink {
+  to {
+    background-color: #BF616A; 
+    color: #D8DEE9;
+  }
+}
+
+#custom-archicon:hover,
+#clock:hover,
+#cpu:hover,
+#memory:hover,
+#pulseaudio:hover,
+#disk:hover,
+#network:hover,
+#bluetooth:hover,
+#custom-brave:hover,
+#custom-spotify:hover,
+#custom-spf:hover,
+#custom-discord:hover,
+#custom-codium:hover {
+  color: #D8DEE9;
+  background: rgba(216, 222, 233, 0.1);
+}
+
+/* === MODULY BEZ POZADÍ PŘI HOVERU === */
+#backlight:hover,
+#pulseaudio_slider:hover,
+#battery:hover {
+  color: #D8DEE9;
+}
+
+/* === KONCOVÝ MODUL: POWER (INVERTOVANÝ STYL) === */
+#custom-power:hover {
+  background: #161320;
+  color: #D8DEE9;
+}
