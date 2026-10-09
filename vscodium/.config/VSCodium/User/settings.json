@@ -1,0 +1,16 @@
+{
+    "git.enableSmartCommit": true,
+    "editor.wordWrap": "on",
+    "editor.cursorBlinking": "expand",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "symbols.hidesExplorerArrows": false,
+    "workbench.iconTheme": "material-icon-theme",
+    "totalTypeScript.hideAllTips": true,
+    "explorer.confirmDragAndDrop": false,
+    "editor.maxTokenizationLineLength": 1000000,
+    "python.createEnvironment.trigger": "off",
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "javascript.updateImportsOnFileMove.enabled": "always"
+}
