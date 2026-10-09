@@ -1,0 +1,11 @@
+[user]
+	email = jons.bucina@gmail.com
+	name = silenyJonas
+[safe]
+	directory = /opt/lampp/htdocs/full-stack-eshop
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
