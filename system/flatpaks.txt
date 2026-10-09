@@ -1,0 +1,4 @@
+com.discordapp.Discord
+com.jetbrains.PyCharm-Community
+com.visualstudio.code
+dev.neovide.neovide
