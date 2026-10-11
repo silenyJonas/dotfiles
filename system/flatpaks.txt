@@ -3,3 +3,4 @@ com.jetbrains.PyCharm-Community
 com.spotify.Client
 com.visualstudio.code
 dev.neovide.neovide
+dev.vencord.Vesktop

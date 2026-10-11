@@ -188,6 +188,6 @@
     "format": "",
     "tooltip": true,
     "tooltip-format": "Spustit Discord",
-    "on-click": "(env ELECTRON_FORCE_DEVICE_SCALE_FACTOR=1.0 GDK_BACKEND=wayland ELECTRON_ENABLE_WAYLAND=1 flatpak run com.discordapp.Discord &) & disown"
+    "on-click": "flatpak run dev.vencord.Vesktop"
   }
 }

@@ -7,7 +7,7 @@ plugins=(git zsh-syntax-highlighting)
 source $ZSH/oh-my-zsh.sh
 
 # ───── APPS ─────
-alias discord='flatpak run com.discordapp.Discord &'
+alias discord='flatpak run dev.vencord.Vesktop >/dev/null 2>&1 &!'
 alias fastfetch='clear && fastfetch'
 alias pipes="~/Apps/pipes.sh"
 alias clock='tty-clock -sbc -C 7'
