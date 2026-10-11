@@ -711,3 +711,173 @@ button.wall-swatch:disabled {
   color: alpha(@fg, 0.8);
   font-size: 11px;
 }
+
+/* === Wi-Fi a Bluetooth === */
+#net {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 16px;
+  margin: 0 0 12px 12px;
+  padding: 10px;
+  color: @fg;
+}
+
+#net scrolledwindow,
+#net viewport {
+  background: transparent;
+}
+
+#net overshoot,
+#net undershoot {
+  background: none;
+}
+
+.net-row {
+  border-radius: 12px;
+}
+
+.net-row.open {
+  background: @tile;
+}
+
+button.net-item {
+  padding: 8px 10px;
+  border-radius: 12px;
+  transition: background 120ms ease;
+}
+
+button.net-item:hover {
+  background: @hover;
+}
+
+.net-icon {
+  font-size: 15px;
+  min-width: 18px;
+  color: @fg_dim;
+}
+
+.net-bars {
+  color: @fg;
+}
+
+.net-name.active {
+  font-weight: bold;
+}
+
+.net-lock {
+  color: @fg_dim;
+  font-size: 11px;
+}
+
+.net-check {
+  color: @accent;
+}
+
+.net-details {
+  padding: 2px 10px 10px 10px;
+}
+
+entry.net-entry {
+  background: alpha(@fg, 0.07);
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 6px 10px;
+  color: @fg;
+  caret-color: @fg;
+  min-height: 0;
+}
+
+entry.net-entry:focus {
+  border-color: @island_border;
+}
+
+button.net-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: @hover;
+  transition: background 150ms ease;
+}
+
+button.net-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.net-btn.primary {
+  background: @pill;
+}
+
+button.net-btn.primary label {
+  color: @pill_fg;
+  font-weight: bold;
+}
+
+button.net-btn.primary:hover {
+  background: #ffffff;
+}
+
+button.net-btn:disabled {
+  opacity: 0.5;
+}
+
+.net-error {
+  color: @bad;
+}
+
+button.net-more {
+  padding: 4px 8px;
+  border-radius: 9px;
+}
+
+button.net-more:hover {
+  background: @hover;
+}
+
+/* tlačítko hledání, když zrovna hledá */
+button.wall-icon.busy {
+  opacity: 1;
+}
+
+button.wall-icon.busy label {
+  color: @accent;
+}
+
+/* vypínač vpravo nahoře */
+switch.net-switch {
+  background: alpha(@fg, 0.14);
+  background-image: none;
+  border: none;
+  border-radius: 12px;
+  box-shadow: none;
+  min-width: 40px;
+  min-height: 22px;
+  transition: background 150ms ease;
+}
+
+switch.net-switch:checked {
+  background: @pill;
+}
+
+switch.net-switch:disabled {
+  opacity: 0.4;
+}
+
+switch.net-switch image {
+  color: transparent;
+}
+
+switch.net-switch slider {
+  background: @fg;
+  background-image: none;
+  border: none;
+  border-radius: 10px;
+  box-shadow: none;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 2px;
+}
+
+switch.net-switch:checked slider {
+  background: @pill_fg;
+}

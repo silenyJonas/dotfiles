@@ -9,6 +9,9 @@ Najetím na pravý okraj (uprostřed výšky) vyjede úzký boční panel
 s hlasitostí a jasem. Když kurzor na okraji zůstane asi vteřinu, otevře se
 ovládací centrum: oznámení, otevřená okna, rychlé přepínače a vypnutí.
 
+Okno Wi-Fi a Bluetooth (--wifi, --bluetooth) vyjede pod pravým koncem lišty:
+seznam sítí s připojením a heslem, seznam Bluetooth zařízení s připojením a párováním.
+
 Přepínač tapet (--wallpapers) ukáže přes celou šířku obrazovky pás náhledů
 ze složky s tapetami; vybraná se nastaví Enterem nebo kliknutím.
 
@@ -17,6 +20,8 @@ Ovládání:   python3 panel.py --toggle   (otevřít / zavřít, třeba z kláv
             python3 panel.py --apps     (otevřít rovnou na seznamu aplikací s hledáním)
             python3 panel.py --side     (otevřít / zavřít boční panel s hlasitostí a jasem)
             python3 panel.py --center   (otevřít / zavřít ovládací centrum)
+            python3 panel.py --wifi     (otevřít / zavřít okno se sítěmi Wi-Fi)
+            python3 panel.py --bluetooth  (otevřít / zavřít okno s Bluetooth zařízeními)
             python3 panel.py --wallpapers        (otevřít / zavřít přepínač tapet)
             python3 panel.py --wallpaper-next    (další tapeta bez otevírání přepínače)
             python3 panel.py --wallpaper-prev    (předchozí tapeta)
@@ -87,6 +92,13 @@ TOAST_TOP_MARGIN = 50      # odsazení bublin od horního okraje (pod lištou)
 # "mimo okno", takže by panel nevyjel. S přesahem je kurzor vždy uvnitř.
 EDGE_OVERHANG = 2
 
+NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
+NET_WIDTH = 340              # šířka okna
+NET_TOP_MARGIN = 6           # mezera pod lištou
+NET_RIGHT_MARGIN = 8         # odsazení od pravého okraje obrazovky
+NET_LIST_HEIGHT = 420        # největší výška seznamu, pak se posouvá
+BT_SCAN_SECONDS = 10         # jak dlouho se po otevření hledají nová Bluetooth zařízení
+
 WALL_ENABLED = True          # přepínač tapet (panel.py --wallpapers)
 WALLPAPER_DIRS = ["~/Pictures/wallpapers"]   # složky s tapetami, prohledávají se i podsložky
 WALL_CARD_W, WALL_CARD_H = 92, 250   # šířka a výška úzkých náhledů
@@ -124,6 +136,8 @@ I = {
     "wifi": "\uf1eb", "bt": "\uf293", "mic": "\uf130", "mic_off": "\uf131",
     "bell": "\uf0f3", "bell_off": "\uf1f6", "coffee": "\uf0f4", "times": "\uf00d", "trash": "\uf1f8",
     "image": "\uf03e", "film": "\uf008", "shuffle": "\uf074", "folder": "\uf07c", "check": "\uf00c",
+    "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
+    "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
@@ -3477,13 +3491,724 @@ class WallpaperPicker:
             self.show()
 
 
+# ----------------------------------------------------------------------------
+# Wi-Fi a Bluetooth
+# ----------------------------------------------------------------------------
+TOOL_ENV = dict(os.environ, LC_ALL="C.UTF-8", LANGUAGE="C")   # nástroje ať odpovídají anglicky, výstup se čte strojově
+
+
+def tool(*cmd, timeout=10):
+    """Spustí systémový nástroj a vrátí (úspěch, standardní výstup, chybový výstup)."""
+    try:
+        done = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                              errors="replace", timeout=timeout, env=TOOL_ENV)
+        return done.returncode == 0, done.stdout, done.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", "timeout"
+    except OSError as err:
+        return False, "", str(err)
+
+
+def split_terse(line):
+    """Rozdělí řádek z 'nmcli -t' na pole. Dvojtečky uvnitř hodnot jsou tam zapsané jako '\\:'."""
+    fields, current, escaped = [], "", False
+    for char in line:
+        if escaped:
+            current, escaped = current + char, False
+        elif char == "\\":
+            escaped = True
+        elif char == ":":
+            fields.append(current)
+            current = ""
+        else:
+            current += char
+    fields.append(current)
+    return fields
+
+
+class SignalBars(Gtk.DrawingArea):
+    """Čtyři sloupečky síly signálu."""
+
+    def __init__(self, percent):
+        super().__init__()
+        self.level = 0 if percent < 5 else 1 if percent < 35 else 2 if percent < 55 else 3 if percent < 75 else 4
+        self.set_size_request(18, 14)
+        self.set_valign(Gtk.Align.CENTER)
+        css(self, "net-bars")
+        self.connect("draw", self.on_draw)
+
+    def on_draw(self, _widget, cr):
+        color = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        height = self.get_allocated_height()
+        for bar in range(4):
+            tall = 4 + bar * (height - 4) / 3
+            cr.rectangle(bar * 5, height - tall, 3, tall)
+            cr.set_source_rgba(color.red, color.green, color.blue, 1.0 if bar < self.level else 0.22)
+            cr.fill()
+        return False
+
+
+class ConnPage:
+    """Společný základ stránek Wi-Fi a Bluetooth: seznam položek, jedna může být rozbalená,
+    dotazy na systém i akce běží na pozadí, aby okno nezamrzalo."""
+    key, title, manager, manager_label = "", "", "", ""
+    off_text, missing_text, empty_text = "", "", ""
+
+    def __init__(self, owner):
+        self.owner = owner
+        self.items, self.power = [], None          # power: True / False / None = služba neodpovídá
+        self.expanded, self.busy = None, None      # klíč rozbalené položky / položky, na které se pracuje
+        self.message, self.failed = "", False      # hláška u rozbalené položky
+        self.secret, self.reveal = "", False       # rozepsané heslo
+        self.loading, self.deep, self.loaded_once, self.drawn = False, False, False, None
+        self.entry = None
+
+        self.box = vbox(8)
+        self.note = label("", "dim", "small", xalign=0)
+        self.note.set_no_show_all(True)
+        self.box.pack_start(self.note, False, False, 0)
+        self.rows = vbox(2)
+        scroll = self.scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_no_show_all(True)
+        scroll.add(self.rows)
+        self.rows.show()
+        self.box.pack_start(scroll, False, False, 0)
+        if self.manager and shutil.which(self.manager):
+            more = Connections.button(label(self.manager_label, "dim", "small"), "flat", "net-more")
+            more.set_halign(Gtk.Align.START)
+            more.connect("clicked", lambda _b: (spawn(self.manager), self.owner.hide()))
+            self.box.pack_start(more, False, False, 0)
+        self.box.show_all()
+
+    # --- co si stránky doplní ---
+    def load(self, deep):
+        """(běží na pozadí) Vrátí (zapnuto, seznam položek). deep = smí to trvat déle (nové hledání)."""
+        raise NotImplementedError
+
+    def set_power(self, on):
+        """(běží na pozadí) Zapne nebo vypne rádio."""
+        raise NotImplementedError
+
+    def describe(self, item):
+        """Vrátí (ikona nebo widget vlevo, podtitulek, widgety vpravo) pro řádek položky."""
+        raise NotImplementedError
+
+    def actions(self, item):
+        """Vrátí seznam (text, hlavní?, funkce pro běh na pozadí) pro rozbalenou položku."""
+        raise NotImplementedError
+
+    def needs_secret(self, _item):
+        return False
+
+    def hint(self, _item):
+        """Poznámka pod rozbalenou položkou (když pro ni není žádná akce)."""
+        return ""
+
+    def scanning(self):
+        return self.loading and self.deep
+
+    # --- načítání ---
+    def refresh(self, deep=False):
+        if self.loading:
+            return
+        self.loading, self.deep = True, deep
+        self.render()
+        self.owner.background(lambda: self.load(deep), self.loaded)
+
+    def loaded(self, result):
+        self.loading, self.loaded_once = False, True
+        if isinstance(result, tuple):
+            self.power, self.items = result
+        if self.expanded is not None and not any(i["key"] == self.expanded for i in self.items):
+            self.collapse()
+        self.render()
+        self.owner.page_changed(self)
+
+    def typing(self):
+        """Píše se právě heslo? (Pak se seznam sám neobnovuje, aby se pole pod rukama neměnilo.)"""
+        item = self.find(self.expanded)
+        return item is not None and self.needs_secret(item)
+
+    def find(self, key):
+        return next((i for i in self.items if i["key"] == key), None)
+
+    def collapse(self):
+        self.expanded, self.message, self.failed, self.secret, self.reveal = None, "", False, "", False
+
+    # --- kreslení seznamu ---
+    def render(self):
+        if self.power is None:
+            note = self.missing_text if self.loaded_once else "Načítám…"
+        elif not self.power:
+            note = self.off_text
+        elif not self.items:
+            note = "Hledám…" if self.scanning() else self.empty_text
+        else:
+            note = ""
+        self.owner.page_changed(self)
+        if note != self.note.get_text():
+            self.note.set_text(note)
+            self.note.set_visible(bool(note))
+            self.owner.fit()
+        shown = self.items if self.power else []
+        state = (repr(shown), self.expanded, self.busy, self.message, self.failed, self.reveal)
+        if state == self.drawn:
+            return
+        self.drawn, self.entry = state, None
+        for child in self.rows.get_children():
+            self.rows.remove(child)
+        for item in shown:
+            self.rows.pack_start(self.row(item), False, False, 0)
+        self.rows.show_all()
+        # seznam je vysoký podle obsahu, nejvýš NET_LIST_HEIGHT (pak se v něm posouvá); okno se mu přizpůsobí
+        self.scroll.set_size_request(-1, min(self.rows.get_preferred_height()[1], NET_LIST_HEIGHT))
+        self.scroll.set_visible(bool(shown))
+        self.owner.fit()
+        GLib.idle_add(self.reveal_open)
+        if self.entry is not None:
+            self.entry.grab_focus_without_selecting()
+            self.entry.set_position(-1)
+
+    def reveal_open(self):
+        """Posune seznam tak, aby rozbalená položka byla celá vidět."""
+        for child in self.rows.get_children():
+            if child.get_style_context().has_class("open"):
+                area, adjust = child.get_allocation(), self.scroll.get_vadjustment()
+                if area.y + area.height > adjust.get_value() + adjust.get_page_size():
+                    adjust.set_value(area.y + area.height - adjust.get_page_size())
+                if area.y < adjust.get_value():
+                    adjust.set_value(area.y)
+        return False
+
+    def row(self, item):
+        is_open = item["key"] == self.expanded
+        box = vbox(0, "net-row")
+        set_class(box, "open", is_open)
+        left, subtitle, right = self.describe(item)
+        line = hbox(10)
+        if isinstance(left, str):
+            left = label(left, "net-icon")
+        line.pack_start(left, False, False, 0)
+        text = vbox(1)
+        name = label(item["name"], "net-name", xalign=0, ellipsize=True)
+        set_class(name, "active", bool(item.get("active")))
+        text.pack_start(name, False, False, 0)
+        if subtitle:
+            text.pack_start(label(subtitle, "dim", "small", xalign=0, ellipsize=True), False, False, 0)
+        text.set_valign(Gtk.Align.CENTER)
+        line.pack_start(text, True, True, 0)
+        for widget in right:
+            line.pack_start(widget, False, False, 0)
+        head = Connections.button(line, "flat", "net-item")
+        head.connect("clicked", lambda _b, key=item["key"]: self.toggle(key))
+        box.pack_start(head, False, False, 0)
+        if is_open:
+            box.pack_start(self.details(item), False, False, 0)
+        return box
+
+    def details(self, item):
+        box = vbox(8, "net-details")
+        working = self.busy == item["key"]
+        if self.needs_secret(item):
+            line = hbox(6)
+            entry = self.entry = Gtk.Entry()
+            css(entry, "net-entry")
+            entry.set_placeholder_text("Heslo")
+            entry.set_visibility(self.reveal)
+            entry.set_input_purpose(Gtk.InputPurpose.PASSWORD)
+            entry.set_text(self.secret)
+            entry.set_sensitive(not working)
+            entry.connect("changed", self.secret_changed)
+            entry.connect("activate", lambda _e: self.primary(item))
+            line.pack_start(entry, True, True, 0)
+            eye = Connections.button(label(I["eye_off" if self.reveal else "eye"]), "flat", "net-btn")
+            eye.connect("clicked", lambda _b: self.toggle_reveal())
+            line.pack_start(eye, False, False, 0)
+            box.pack_start(line, False, False, 0)
+        line = hbox(6)
+        for text, primary, work in self.actions(item):
+            btn = Connections.button(label("Pracuji…" if working and primary else text), "flat", "net-btn")
+            set_class(btn, "primary", primary)
+            btn.set_sensitive(not working)
+            btn.connect("clicked", lambda _b, w=work: self.act(item, w))
+            line.pack_start(btn, primary, primary, 0)
+        box.pack_start(line, False, False, 0)
+        message = self.message or self.hint(item)
+        if message:
+            note = label(message, "small", "net-error" if self.failed else "dim", xalign=0)
+            note.set_line_wrap(True)
+            note.set_max_width_chars(34)
+            box.pack_start(note, False, False, 0)
+        return box
+
+    # --- ovládání ---
+    def toggle(self, key):
+        if self.busy is not None:
+            return
+        opened = self.expanded != key
+        self.collapse()
+        if opened:
+            self.expanded = key
+        self.render()
+
+    def secret_changed(self, entry):
+        self.secret = entry.get_text()
+
+    def toggle_reveal(self):
+        self.reveal = not self.reveal
+        self.render()
+
+    def primary(self, item):
+        for _text, primary, work in self.actions(item):
+            if primary:
+                self.act(item, work)
+                return
+
+    def act(self, item, work):
+        """Spustí akci na pozadí; work vrátí None při úspěchu, jinak text chyby."""
+        if self.busy is not None:
+            return
+        self.busy, self.message, self.failed = item["key"], "", False
+        self.render()
+        self.owner.background(work, self.acted)
+
+    def acted(self, error):
+        self.busy = None
+        if error:
+            self.message, self.failed = str(error), True
+        else:
+            self.collapse()
+        self.render()
+        self.refresh()
+
+
+class WifiPage(ConnPage):
+    key, title = "wifi", "Wi-Fi"
+    manager, manager_label = "nm-connection-editor", "Upravit uložené sítě…"
+    off_text = "Wi-Fi je vypnuté."
+    missing_text = "Správce sítě (NetworkManager) neodpovídá."
+    empty_text = "Žádné sítě v dosahu."
+
+    def __init__(self, owner):
+        self.nmcli = shutil.which("nmcli") or "nmcli"
+        self.names = {}          # UUID uložené sítě -> její název (SSID), ať se neptáme pořád dokola
+        super().__init__(owner)
+
+    def saved(self):
+        """Uložené Wi-Fi sítě: název sítě (SSID) -> UUID profilu."""
+        _ok, out, _err = tool(self.nmcli, "-t", "-f", "UUID,TYPE", "connection", "show")
+        uuids = [f[0] for f in map(split_terse, out.splitlines()) if len(f) >= 2 and f[1] == "802-11-wireless"]
+        for uuid in uuids:
+            if uuid not in self.names:
+                _ok, name, _err = tool(self.nmcli, "-g", "802-11-wireless.ssid", "connection", "show", "uuid", uuid)
+                self.names[uuid] = split_terse(name.strip())[0] if name.strip() else ""
+        self.names = {uuid: self.names[uuid] for uuid in uuids}
+        return {name: uuid for uuid, name in self.names.items() if name}
+
+    def load(self, deep):
+        ok, out, _err = tool(self.nmcli, "-t", "-f", "WIFI", "radio")
+        if not ok or not out.strip():
+            return None, []
+        if "enabled" not in out:
+            return False, []
+        saved = self.saved()
+        _ok, out, _err = tool(self.nmcli, "-t", "-f", "IN-USE,SIGNAL,SECURITY,SSID", "device", "wifi", "list",
+                              "--rescan", "yes" if deep else "auto", timeout=25)
+        best = {}
+        for fields in map(split_terse, out.splitlines()):
+            if len(fields) < 4 or not fields[3]:
+                continue                         # skrytá síť bez názvu
+            used, signal, security, ssid = fields[0], fields[1], fields[2].strip(), fields[3]
+            item = {"key": ssid, "name": ssid, "active": used.strip() == "*",
+                    "signal": int(signal) if signal.isdigit() else 0,
+                    "secure": security not in ("", "--"), "enterprise": "802.1X" in security,
+                    "uuid": saved.get(ssid)}
+            old = best.get(ssid)                  # jedna síť může mít víc vysílačů, bere se ten nejsilnější
+            if old is None or (item["active"], item["signal"]) > (old["active"], old["signal"]):
+                best[ssid] = item
+        items = sorted(best.values(), key=lambda i: (not i["active"], -i["signal"], i["name"].casefold()))
+        for item in items:                         # sílu zaokrouhlit, ať se seznam nepřekresluje kvůli každému procentu
+            item["signal"] = item["signal"] // 10 * 10
+        return True, items
+
+    def set_power(self, on):
+        tool(self.nmcli, "radio", "wifi", "on" if on else "off")
+        if on:
+            time.sleep(2.0)        # rádiu chvíli trvá, než něco najde
+
+    def describe(self, item):
+        if item["active"]:
+            subtitle = "Připojeno"
+        elif item["uuid"]:
+            subtitle = "Uložená"
+        elif not item["secure"]:
+            subtitle = "Otevřená síť"
+        else:
+            subtitle = ""
+        right = []
+        if item["secure"]:
+            right.append(label(I["lock"], "net-lock"))
+        if item["active"]:
+            right.append(label(I["check"], "net-check"))
+        return SignalBars(item["signal"]), subtitle, right
+
+    def needs_secret(self, item):
+        return item["secure"] and not item["uuid"] and not item["active"] and not item["enterprise"]
+
+    def hint(self, item):
+        if item["enterprise"] and not item["uuid"]:
+            return "Podniková síť se jménem a heslem. Nastav ji přes „Upravit uložené sítě“."
+        return ""
+
+    def actions(self, item):
+        if item["active"]:
+            found = [("Odpojit", True, self.disconnect)]
+        elif item["enterprise"] and not item["uuid"]:
+            found = []
+        else:
+            found = [("Připojit", True, lambda: self.connect(item))]
+        if item["uuid"]:
+            found.append(("Zapomenout", False, lambda: self.forget(item)))
+        return found
+
+    def connect(self, item):
+        if item["uuid"]:
+            ok, out, err = tool(self.nmcli, "-w", "30", "connection", "up", "uuid", item["uuid"], timeout=40)
+            if not ok and "ecrets" in out + err:
+                return "Uložené heslo nesedí. Dej Zapomenout a připoj se znovu."
+        else:
+            secret = self.secret
+            if item["secure"] and len(secret) < 8:
+                return "Heslo musí mít aspoň 8 znaků."
+            cmd = [self.nmcli, "-w", "30", "device", "wifi", "connect", item["name"]]
+            ok, out, err = tool(*cmd, *(["password", secret] if item["secure"] else []), timeout=40)
+            if not ok:      # nepovedený pokus po sobě nechává uložený profil se špatným heslem
+                uuid = self.saved().get(item["name"])
+                if uuid:
+                    tool(self.nmcli, "connection", "delete", "uuid", uuid)
+        if ok:
+            return None
+        text = (err or out).strip()
+        if "ecrets" in text or "psk" in text:
+            return "Špatné heslo."
+        if "No network with SSID" in text:
+            return "Síť už není v dosahu."
+        if text == "timeout" or "imeout" in text:
+            return "Připojení trvalo moc dlouho."
+        return (text.splitlines() or ["Připojení se nepovedlo."])[-1].removeprefix("Error: ")
+
+    def disconnect(self):
+        _ok, out, _err = tool(self.nmcli, "-t", "-f", "DEVICE,TYPE", "device", "status")
+        device = next((f[0] for f in map(split_terse, out.splitlines()) if len(f) >= 2 and f[1] == "wifi"), None)
+        if device is None:
+            return "Nenašel jsem Wi-Fi zařízení."
+        ok, out, err = tool(self.nmcli, "device", "disconnect", device)
+        return None if ok else (err or out).strip().removeprefix("Error: ")
+
+    def forget(self, item):
+        ok, out, err = tool(self.nmcli, "connection", "delete", "uuid", item["uuid"])
+        return None if ok else (err or out).strip().removeprefix("Error: ")
+
+
+class BluetoothPage(ConnPage):
+    key, title = "bluetooth", "Bluetooth"
+    manager, manager_label = "blueman-manager", "Správce Bluetooth…"
+    off_text = "Bluetooth je vypnutý."
+    missing_text = "Bluetooth adaptér nenalezen."
+    empty_text = "Žádná zařízení. Zkus hledání tlačítkem nahoře."
+    ICONS = (("headset", "headphones"), ("headphone", "headphones"), ("audio", "vol_high"), ("phone", "mobile"),
+             ("keyboard", "keyboard"), ("mouse", "mouse"), ("gaming", "gamepad"), ("computer", "laptop"),
+             ("video", "tv"))
+
+    def __init__(self, owner):
+        self.btctl = shutil.which("bluetoothctl") or "bluetoothctl"
+        self.scan_until, self.scanner = 0.0, None
+        super().__init__(owner)
+
+    def scanning(self):
+        return time.time() < self.scan_until
+
+    def load(self, _deep):
+        ok, out, _err = tool(self.btctl, "show")
+        if not ok or "Powered:" not in out:
+            return None, []
+        if "Powered: yes" not in out:
+            return False, []
+        _ok, out, _err = tool(self.btctl, "devices")
+        items = []
+        for line in out.splitlines()[:40]:
+            match = re.match(r"Device ((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}) ?(.*)", line.strip())
+            if not match:
+                continue
+            mac = match.group(1)
+            _ok, info, _err = tool(self.btctl, "info", mac)
+            props = dict(re.findall(r"^\s*([A-Za-z ]+): (.*)$", info, re.M))
+            name = props.get("Alias") or props.get("Name") or match.group(2) or mac
+            paired, connected = props.get("Paired") == "yes", props.get("Connected") == "yes"
+            if not paired and not connected:
+                # cizí zařízení ukazovat jen když jsou právě v dosahu a mají jméno
+                if "RSSI" not in props or name.replace("-", ":").upper() == mac.upper():
+                    continue
+            battery = re.search(r"\((\d+)\)", props.get("Battery Percentage", ""))
+            items.append({"key": mac, "name": name, "active": connected, "paired": paired,
+                          "kind": props.get("Icon", ""), "battery": int(battery.group(1)) if battery else None})
+        items.sort(key=lambda i: (not i["active"], not i["paired"], i["name"].casefold()))
+        return True, items
+
+    def loaded(self, result):
+        wanted = self.deep
+        super().loaded(result)
+        if wanted:
+            self.scan()
+
+    def scan(self):
+        """Spustí na chvíli hledání nových zařízení."""
+        if self.scanning() or not self.power:
+            return False
+        self.scan_until = time.time() + BT_SCAN_SECONDS
+        try:
+            self.scanner = subprocess.Popen([self.btctl, "--timeout", str(BT_SCAN_SECONDS), "scan", "on"],
+                                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL, env=TOOL_ENV)
+        except OSError:
+            self.scan_until = 0.0
+        self.render()
+        return False
+
+    def set_power(self, on):
+        tool(self.btctl, "power", "on" if on else "off")
+        if on:
+            time.sleep(1.0)
+
+    def describe(self, item):
+        icon = next((I[name] for part, name in self.ICONS if part in item["kind"]), I["bt"])
+        parts = []
+        if item["active"]:
+            parts.append("Připojeno")
+        elif item["paired"]:
+            parts.append("Spárováno")
+        else:
+            parts.append("Nové zařízení")
+        if item["battery"] is not None:
+            parts.append(f"baterie {item['battery']} %")
+        right = [label(I["check"], "net-check")] if item["active"] else []
+        return icon, "  ·  ".join(parts), right
+
+    def actions(self, item):
+        mac = item["key"]
+        if item["active"]:
+            found = [("Odpojit", True, lambda: self.command("disconnect", mac, "Successful disconnected"))]
+        elif item["paired"]:
+            found = [("Připojit", True, lambda: self.command("connect", mac, "Connection successful", 25))]
+        else:
+            found = [("Spárovat a připojit", True, lambda: self.pair(mac))]
+        if item["paired"]:
+            found.append(("Odebrat", False, lambda: self.command("remove", mac, "Device has been removed")))
+        return found
+
+    def command(self, verb, mac, success, timeout=12):
+        """Pošle zařízení příkaz. bluetoothctl nevrací spolehlivě chybový kód, úspěch se pozná podle textu."""
+        ok, out, err = tool(self.btctl, verb, mac, timeout=timeout)
+        text = out + err
+        if success in text:
+            return None
+        if err == "timeout" or "timeout" in text.lower():
+            return "Zařízení neodpovídá. Je zapnuté a v dosahu?"
+        if "not available" in text:
+            return "Zařízení není v dosahu."
+        failed = re.search(r"Failed to \w+: (\S+)(?: (\S+))?", text)
+        if failed:
+            return "Nepovedlo se (" + (failed.group(2) or failed.group(1).rsplit(".", 1)[-1]) + ")."
+        return None if ok and verb != "connect" else "Nepovedlo se."
+
+    def pair(self, mac):
+        ok, out, err = tool(self.btctl, "pair", mac, timeout=35)
+        text = out + err
+        if "Pairing successful" not in text and "AlreadyExists" not in text:
+            if "AuthenticationFailed" in text or "AuthenticationCanceled" in text or "passkey" in text.lower():
+                return "Zařízení chce potvrdit kód. Spáruj ho ve Správci Bluetooth."
+            return "Párování se nepovedlo. Je zařízení v párovacím režimu?"
+        tool(self.btctl, "trust", mac)
+        return self.command("connect", mac, "Connection successful", 25)
+
+
+class Connections(AutoHide):
+    """Okno pod pravým ostrůvkem lišty se záložkami Wi-Fi a Bluetooth."""
+
+    def __init__(self, app):
+        self.visible, self.close_timer, self.tick_timer = False, None, None
+        self.current, self.fitted = None, 0.0
+        self.win = layer_window(app, "island-net")
+        if GtkLayerShell.is_supported():
+            GtkLayerShell.set_anchor(self.win, GtkLayerShell.Edge.RIGHT, True)
+            GtkLayerShell.set_exclusive_zone(self.win, 0)          # pod lištou, ne přes ni
+            GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.TOP, NET_TOP_MARGIN)
+            GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.RIGHT, NET_RIGHT_MARGIN)
+            GtkLayerShell.set_keyboard_mode(self.win, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+        self.watch_pointer()
+        self.win.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.win.connect("key-press-event", self.on_key)
+
+        root = vbox(10)
+        root.set_name("net")
+        root.set_size_request(NET_WIDTH, -1)
+        self.win.add(root)
+        head = hbox(4)
+        self.pages, self.tabs = {}, {}
+        for page in (WifiPage(self), BluetoothPage(self)):
+            self.pages[page.key] = page
+            tab = self.button(label(page.title), "flat", "wall-chip")
+            tab.connect("clicked", lambda _b, key=page.key: self.select(key))
+            head.pack_start(tab, False, False, 0)
+            self.tabs[page.key] = tab
+        self.switch = Gtk.Switch()
+        self.switch.set_can_focus(False)
+        self.switch.set_valign(Gtk.Align.CENTER)
+        css(self.switch, "net-switch")
+        self.switch_handler = self.switch.connect("state-set", self.on_switch)
+        head.pack_end(self.switch, False, False, 0)
+        self.scan_btn = self.button(label(I["refresh"]), "flat", "wall-icon")
+        self.scan_btn.connect("clicked", lambda _b: self.page().refresh(deep=True))
+        head.pack_end(self.scan_btn, False, False, 4)
+        root.pack_start(head, False, False, 0)
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self.stack.set_transition_duration(120)
+        self.stack.set_vhomogeneous(False)
+        self.stack.set_interpolate_size(True)
+        for key, page in self.pages.items():
+            self.stack.add_named(page.box, key)
+        root.pack_start(self.stack, False, False, 0)
+        root.show_all()
+        self.select("wifi")
+
+    @staticmethod
+    def button(child, *classes):
+        btn = Gtk.Button()
+        btn.add(child)
+        btn.set_can_focus(False)
+        return css(btn, *classes)
+
+    @staticmethod
+    def background(work, done=None):
+        """Spustí work ve vedlejším vlákně a jeho výsledek předá funkci done zpátky v hlavním vlákně."""
+        def runner():
+            try:
+                result = work()
+            except Exception as err:      # chyba nesmí shodit panel, jen se ukáže
+                result = f"Chyba: {err}"
+            if done is not None:
+                GLib.idle_add(lambda: done(result) and False)
+        threading.Thread(target=runner, daemon=True).start()
+
+    def page(self):
+        return self.pages[self.current]
+
+    def fit(self):
+        """Smrskne okno na velikost obsahu (samo od sebe by umělo jen růst)."""
+        self.fitted = time.monotonic()
+        self.win.resize(1, 1)
+
+    def select(self, key):
+        if key != self.current and self.current is not None:
+            self.page().collapse()
+            self.page().render()
+        self.current = key
+        for name, tab in self.tabs.items():
+            set_class(tab, "active", name == key)
+        self.stack.set_visible_child_name(key)
+        self.page_changed(self.page())
+        self.fit()
+        if self.visible:
+            self.page().refresh(deep=True)
+
+    def page_changed(self, page):
+        """Stránka má nová data: srovnat přepínač nahoře."""
+        if page is not self.page():
+            return
+        self.switch.handler_block(self.switch_handler)
+        self.switch.set_sensitive(page.power is not None)
+        self.switch.set_state(bool(page.power))
+        self.switch.handler_unblock(self.switch_handler)
+        self.scan_btn.set_sensitive(bool(page.power) and not page.scanning())
+        set_class(self.scan_btn, "busy", page.scanning())     # probíhající hledání je vidět na tlačítku
+
+    def on_switch(self, _switch, state):
+        page = self.page()
+        self.switch.set_sensitive(False)
+        self.background(lambda: page.set_power(state), lambda _result: page.refresh(deep=state))
+        return False
+
+    def on_key(self, _win, event):
+        if event.keyval == Gdk.KEY_Escape:
+            if self.page().expanded is not None and self.page().busy is None:
+                self.page().collapse()
+                self.page().render()
+            else:
+                self.hide()
+            return True
+        return False
+
+    def tick(self):
+        page = self.page()
+        if page.busy is None and not page.typing():
+            page.refresh()
+        page.render()
+        return True
+
+    def close_if_outside(self):
+        """Samo se zavře po odjetí kurzoru, ale ne uprostřed práce nebo psaní hesla."""
+        self.close_timer = None
+        page = self.page()
+        if page.busy is not None or (page.typing() and page.secret):
+            return False
+        if time.monotonic() - self.fitted < 0.8:
+            return False      # kurzor neodjel, to se jen okno pod ním zmenšilo (ubyla položka apod.)
+        if not self.pointer_inside():
+            self.hide()
+        return False
+
+    def show(self, key=None):
+        self.cancel_close()
+        if key:
+            self.select(key)
+        if self.visible:
+            return
+        self.visible = True
+        self.win.show()
+        self.page().refresh(deep=True)
+        if self.tick_timer is None:
+            self.tick_timer = GLib.timeout_add_seconds(3, self.tick)
+
+    def hide(self):
+        self.cancel_close()
+        if not self.visible:
+            return
+        self.visible = False
+        if self.tick_timer is not None:
+            GLib.source_remove(self.tick_timer)
+            self.tick_timer = None
+        self.win.hide()
+        for page in self.pages.values():
+            if page.busy is None:
+                page.collapse()
+                page.render()
+
+    def toggle(self, key):
+        if self.visible and self.current == key:
+            self.hide()
+        else:
+            self.show(key)
+
+
 class App(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="io.github.island_panel",
                          flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.panel = self.trigger = self.side = self.center = self.edge = self.css_monitor = None
         self.server = self.toasts = self.icons = None
-        self.walls = self.picker = None
+        self.walls = self.picker = self.net = None
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -3514,6 +4239,8 @@ class App(Gtk.Application):
                 self.toasts.blocked = lambda: self.center.visible
         if self.side or self.center:
             self.edge = RightEdge(self, self.side, self.center)
+        if NET_ENABLED:
+            self.net = Connections(self)
         if WALL_ENABLED:
             self.walls = Wallpapers()
             self.walls.restore()                               # po přihlášení vrátit vybranou tapetu
@@ -3536,6 +4263,9 @@ class App(Gtk.Application):
         args = command_line.get_arguments()[1:]
         if "--quit" in args:
             self.quit()
+        elif "--wifi" in args or "--bluetooth" in args:
+            if self.net:
+                self.net.toggle("wifi" if "--wifi" in args else "bluetooth")
         elif "--wallpapers" in args:
             if self.picker:
                 self.picker.toggle()

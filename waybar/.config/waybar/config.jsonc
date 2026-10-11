@@ -119,7 +119,7 @@
       "disabled": "",
       "connected": ""
     },
-    "on-click": "blueman-manager",
+    "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --bluetooth",
     "tooltip-format": "{status}",
     "tooltip-format-connected": " {device_alias}",
     "tooltip-format-discovering": " Hledání...",
@@ -132,7 +132,7 @@
     "tooltip-format-wifi": " {essid} ({signalStrength}%) \nIP: {ipaddr}/{cidr}",
     "tooltip-format-ethernet": " {ifname} {ipaddr}/{cidr}",
     "tooltip-format-disconnected": "Odpojeno",
-    "on-click": "nm-connection-editor",
+    "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --wifi",
     "max-length": 50
   },
   "backlight": {
