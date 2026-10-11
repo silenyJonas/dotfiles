@@ -2514,18 +2514,19 @@ def rounded_polygon(cr, points, radius):
 
 class WallItem:
     """Jedna tapeta ze složky."""
-    __slots__ = ("path", "name", "folder", "kind", "key", "search", "small", "surface", "made_for",
+    __slots__ = ("path", "name", "ext", "folder", "kind", "key", "search", "small", "surface", "made_for",
                  "busy", "failed")
 
-    def __init__(self, path, root):
+    def __init__(self, path, root, moving=()):
         st = os.stat(path)
         self.path = path
         self.name, ext = os.path.splitext(os.path.basename(path))
+        self.ext = ext.lower()
         rel = os.path.relpath(path, root)
         self.folder = rel.split(os.sep)[0] if os.sep in rel else ""
-        self.kind = "vid" if ext.lower() in VIDEO_EXTS else "pic"
+        self.kind = "vid" if self.ext in moving else "pic"      # vid = pohyblivá tapeta (video nebo GIF)
         # klíč náhledu: když se soubor změní, vznikne nový náhled
-        self.key = hashlib.sha1(f"{path}|{st.st_mtime_ns}|{st.st_size}|{THUMB_H}".encode()).hexdigest()
+        self.key = hashlib.sha1(f"2|{path}|{st.st_mtime_ns}|{st.st_size}|{THUMB_H}".encode()).hexdigest()
         self.search = fold(self.name + " " + self.folder)
         # small = výřez pro úzkou kartu, surface = celý náhled pro vybranou kartu; oba už ve velikosti,
         # v jaké se kreslí (made_for = pro jaké měřítko displeje), takže se při kreslení nemusí zmenšovat
@@ -2542,6 +2543,9 @@ class Wallpapers:
         self.items, self.by_path = [], {}
         self.exts = picture_extensions()
         self.video = bool(shutil.which("mpvpaper"))    # video tapety jen s programem mpvpaper
+        # Co se pouští jako pohyblivá tapeta. GIF umí animovaně jen mpvpaper; bez něj zůstane
+        # obyčejným obrázkem a na ploše je vidět jeho první snímek.
+        self.moving = VIDEO_EXTS | {".gif"} if self.video else set()
         self.video_frames = bool(shutil.which("ffmpegthumbnailer") or shutil.which("ffmpeg"))
         self.scale = 1                                 # měřítko displeje, pro které se náhledy chystají
         self.cond = threading.Condition()
@@ -2571,14 +2575,14 @@ class Wallpapers:
                 dirs[:] = [d for d in dirs if not d.startswith(".")]
                 for name in files:
                     ext = os.path.splitext(name)[1].lower()
-                    if name.startswith(".") or not (ext in self.exts or (self.video and ext in VIDEO_EXTS)):
+                    if name.startswith(".") or not (ext in self.exts or ext in self.moving):
                         continue
                     path = os.path.join(folder, name)
                     if path in seen:
                         continue
                     seen.add(path)
                     try:
-                        item = WallItem(path, root)
+                        item = WallItem(path, root, self.moving)
                     except OSError:
                         continue
                     old = self.by_path.get(path)
@@ -2609,7 +2613,7 @@ class Wallpapers:
 
     def workable(self, item):
         """Dá se pro tapetu vyrobit náhled? (Video bez ffmpegu zůstane jen s ikonou.)"""
-        return not item.busy and not item.failed and (item.kind == "pic" or self.video_frames)
+        return not item.busy and not item.failed and (item.ext not in VIDEO_EXTS or self.video_frames)
 
     def needs(self, item, big):
         if not self.workable(item):
@@ -2692,14 +2696,22 @@ class Wallpapers:
                 pixbuf = None
         if pixbuf is None:
             source, size = item.path, None
-            if item.kind == "vid":
+            if item.ext in VIDEO_EXTS:
                 source = self.video_frame(item)
             else:
                 fmt, width, tall = GdkPixbuf.Pixbuf.get_file_info(item.path)
                 if fmt is not None:
                     size = [width, tall]
             try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(source, THUMB_MAX_W, THUMB_H, True)
+                if item.ext == ".gif":
+                    # animovaný GIF se zmenšený načíst nedá, proto celý a zmenšit až první snímek
+                    frame = GdkPixbuf.Pixbuf.new_from_file(source)
+                    ratio = min(THUMB_MAX_W / frame.get_width(), THUMB_H / frame.get_height())
+                    pixbuf = frame.scale_simple(max(1, round(frame.get_width() * ratio)),
+                                                max(1, round(frame.get_height() * ratio)),
+                                                GdkPixbuf.InterpType.BILINEAR)
+                else:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(source, THUMB_MAX_W, THUMB_H, True)
             finally:
                 if source != item.path:
                     os.remove(source)
@@ -2792,7 +2804,7 @@ class Wallpapers:
     def apply(self, path, remember=True):
         """Nastaví tapetu. Nová se spustí přes starou a stará se ukončí až potom, takže plocha neproblikne."""
         old = [pid for pid, _cmd in processes("swaybg", "mpvpaper")]
-        if os.path.splitext(path)[1].lower() in VIDEO_EXTS:
+        if os.path.splitext(path)[1].lower() in self.moving:
             cmd = ["mpvpaper", "-o", WALL_VIDEO_OPTIONS, "*", path]
         else:
             cmd = ["swaybg", "-i", path, "-m", WALL_FILL_MODE]
@@ -2830,7 +2842,9 @@ class Wallpapers:
         path = read(self.state_file)
         if not path or not os.path.isfile(path):
             return
-        if any(path in cmd for _pid, cmd in processes("swaybg", "mpvpaper")):
+        # Pohyblivou tapetu musí pouštět mpvpaper; swaybg spuštěný po přihlášení z ní umí nanejvýš první snímek.
+        program = "mpvpaper" if os.path.splitext(path)[1].lower() in self.moving else "swaybg"
+        if any(path in cmd for _pid, cmd in processes(program)):
             return
         self.apply(path, remember=False)
 
@@ -3238,7 +3252,7 @@ class WallpaperPicker:
         y = cy - h / 2 + 7
         tags = []
         if WALL_TAGS:
-            tags.append(("VID" if item.kind == "vid" else "PIC", False))
+            tags.append(("GIF" if item.ext == ".gif" else "VID" if item.kind == "vid" else "PIC", False))
         if item.path == self.current:
             tags.append((I["check"], True))
         for text, light in tags:
