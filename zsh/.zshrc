@@ -95,5 +95,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 unalias spotify 2>/dev/null
 spotify() {
-    command spotify --force-device-scale-factor=2 "$@" >/dev/null 2>&1 &!
+    flatpak run com.spotify.Client "$@" >/dev/null 2>&1 &!
 }
+
+export PATH=$PATH:/home/joncl/.spicetify

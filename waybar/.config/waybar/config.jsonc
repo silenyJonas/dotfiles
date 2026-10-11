@@ -170,7 +170,7 @@
     "format": "",
     "tooltip": true,
     "tooltip-format": "Spustit Spotify",
-    "on-click": "snap run spotify --force-device-scale-factor=2"
+    "on-click": "flatpak run com.spotify.Client"
   },
   "custom/spf": {
     "format": "",

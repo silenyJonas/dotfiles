@@ -6,4 +6,3 @@ gnome-46-2404
 gtk-common-themes
 mesa-2404
 snapd
-spotify

@@ -97,7 +97,9 @@ WALL_RADIUS = 10             # zaoblení rohů náhledů
 WALL_DIM = 0.35              # ztmavení plochy pod přepínačem (0 = žádné, 1 = černá)
 WALL_SHADE = 0.45            # o kolik jsou nevybrané náhledy tmavší než vybraný (0 = stejně světlé)
 WALL_EDGE_FADE = 120         # jak daleko od krajů obrazovky se náhledy začnou ztrácet (0 = vůbec)
-WALL_TAGS = True             # štítky PIC / VID v rohu náhledů
+WALL_TAGS = False            # štítek PIC v rohu obrázků (GIF a VID se značí vždy)
+WALL_CAPTION = False         # pod náhledy název a rozlišení vybrané tapety
+WALL_HINT = False            # úplně dole nápověda ke klávesám
 WALL_FILL_MODE = "fill"      # jak se obrázek na plochu umístí: fill, fit, stretch, center, tile
 WALL_VIDEO_OPTIONS = "no-audio loop"   # volby přehrávače u video tapet (ty potřebují program mpvpaper)
 
@@ -2955,10 +2957,12 @@ class WallpaperPicker:
         self.info_label = label("", "dim", "small")
         caption.pack_start(self.name_label, False, False, 0)
         caption.pack_start(self.info_label, False, False, 0)
+        caption.set_no_show_all(not WALL_CAPTION)
         root.pack_start(caption, False, False, 0)
         hint = label("← →  vybrat      Enter  nastavit      Mezerník  náhled"
                      "      písmena  hledat      Esc  zavřít", "wall-hint")
         hint.set_halign(Gtk.Align.CENTER)
+        hint.set_no_show_all(not WALL_HINT)
         root.pack_start(hint, False, False, 0)
         root.show_all()
 
@@ -2975,9 +2979,9 @@ class WallpaperPicker:
         """Filtry v liště: vše, obrázky / videa (jsou-li nějaká videa) a podsložky."""
         for child in self.chip_box.get_children():
             self.chip_box.remove(child)
-        self.filters = [("all", "VŠE")]
+        self.filters = [("all", "ALL")]
         if any(i.kind == "vid" for i in self.store.items):
-            self.filters += [("pic", "OBR"), ("vid", "VID")]
+            self.filters += [("pic", "PIC"), ("vid", "VID")]
         folders = sorted({i.folder for i in self.store.items if i.folder}, key=natural)
         self.filters += [("dir:" + name, name.upper()[:14]) for name in folders[:8]]
         if self.filter not in [key for key, _text in self.filters]:
@@ -3251,8 +3255,10 @@ class WallpaperPicker:
         x = cx - w / 2 + WALL_SLANT * (h / 2 - (7 if WALL_SLANT > 0 else 23)) + 7
         y = cy - h / 2 + 7
         tags = []
-        if WALL_TAGS:
-            tags.append(("GIF" if item.ext == ".gif" else "VID" if item.kind == "vid" else "PIC", False))
+        if item.ext == ".gif" or item.kind == "vid":
+            tags.append(("GIF" if item.ext == ".gif" else "VID", False))
+        elif WALL_TAGS:
+            tags.append(("PIC", False))
         if item.path == self.current:
             tags.append((I["check"], True))
         for text, light in tags:
