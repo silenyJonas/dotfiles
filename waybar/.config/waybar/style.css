@@ -60,7 +60,7 @@ window#waybar.hidden {
  */
 .modules-left,
 .modules-right {
-  min-width: 376px;
+  min-width: 304px;
 }
 
 /* === Moduly uvnitř ostrůvků === */

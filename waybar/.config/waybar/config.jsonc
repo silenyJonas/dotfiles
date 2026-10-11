@@ -14,23 +14,20 @@
     "cpu",
     "memory",
     "temperature",
-    "battery",
-    "network"
+    "battery"
   ],
   "modules-center": [
     "clock"
   ],
   "modules-right": [
-    "backlight",
-    "pulseaudio",
+    "network",
     "custom/brave",
     "custom/spotify",
     "custom/codium",
     "custom/discord",
     "disk",
     "bluetooth",
-    "custom/power",
-    "pulseaudio_slider"
+    "custom/power"
   ],
 
   /* === Modules Left === */

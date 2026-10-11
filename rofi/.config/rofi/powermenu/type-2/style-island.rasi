@@ -1,0 +1,135 @@
+/**
+ * Powermenu jako řada velkých tlačítek (Super + X)
+ * ve stylu ostrůvků Waybaru.
+ **/
+
+configuration {
+    show-icons: false;
+}
+
+@import "~/.config/rofi/colors/island.rasi"
+
+* {
+    font: "JetBrainsMono Nerd Font 10";
+}
+
+/*
+USE_BUTTONS=YES
+*/
+
+window {
+    transparency:     "real";
+    location:         center;
+    anchor:           center;
+    fullscreen:       false;
+    width:            600px;
+    margin:           0px;
+    padding:          0px;
+    border:           1px solid;
+    border-radius:    16px;
+    border-color:     @border-col;
+    background-color: @background;
+    cursor:           "default";
+}
+
+mainbox {
+    spacing:          10px;
+    padding:          12px;
+    background-color: transparent;
+    children:         [ "inputbar", "listview" ];
+}
+
+/* --- Hlavička: světlá pilulka s ikonou + uptime --- */
+inputbar {
+    spacing:          8px;
+    background-color: transparent;
+    text-color:       @foreground;
+    children:         [ "textbox-prompt-colon", "prompt" ];
+}
+
+dummy {
+    background-color: transparent;
+}
+
+textbox-prompt-colon {
+    expand:           false;
+    str:              "";
+    padding:          8px 13px;
+    border-radius:    11px;
+    background-color: @pill;
+    text-color:       @pill-text;
+}
+
+prompt {
+    padding:          8px 12px;
+    border-radius:    11px;
+    background-color: @background-alt;
+    text-color:       @foreground;
+}
+
+message {
+    margin:           0px;
+    padding:          4px 12px;
+    border:           0px solid;
+    background-color: transparent;
+    text-color:       @foreground-dim;
+}
+
+textbox {
+    background-color: transparent;
+    text-color:       inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.5;
+    markup:           true;
+}
+
+error-message {
+    padding:          12px;
+    background-color: transparent;
+    text-color:       @foreground;
+}
+
+/* --- Tlačítka --- */
+listview {
+    columns:          5;
+    lines:            1;
+    cycle:            true;
+    dynamic:          true;
+    scrollbar:        false;
+    layout:           vertical;
+    fixed-height:     true;
+    fixed-columns:    true;
+    spacing:          8px;
+    background-color: transparent;
+    cursor:           "default";
+}
+
+element {
+    spacing:          0px;
+    padding:          26px 10px;
+    border-radius:    14px;
+    background-color: @background-alt;
+    text-color:       @foreground;
+    cursor:           pointer;
+}
+
+element-text {
+    font:             "feather bold 24";
+    background-color: transparent;
+    text-color:       inherit;
+    cursor:           inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.5;
+}
+
+element normal.normal,
+element alternate.normal {
+    background-color: @background-alt;
+    text-color:       @foreground;
+}
+
+/* vybrané tlačítko: světlá pilulka jako vypínač v liště */
+element selected.normal {
+    background-color: @pill;
+    text-color:       @pill-text;
+}

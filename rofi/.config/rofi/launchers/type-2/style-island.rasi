@@ -1,0 +1,135 @@
+/**
+ * Launcher (Super + R) ve stylu ostrůvků Waybaru.
+ * Tmavý poloprůhledný panel, vyhledávací pole nahoře, zaoblené řádky.
+ **/
+
+configuration {
+    modi:                "drun";
+    show-icons:          true;
+    display-drun:        "";
+    drun-display-format: "{name}[  <span size='small' alpha='50%'>{comment}</span>]";
+}
+
+@import "~/.config/rofi/colors/island.rasi"
+
+* {
+    font: "JetBrainsMono Nerd Font 10";
+}
+
+window {
+    transparency:     "real";
+    location:         center;
+    anchor:           center;
+    fullscreen:       false;
+    width:            520px;
+    margin:           0px;
+    padding:          0px;
+    border:           1px solid;
+    border-radius:    16px;
+    border-color:     @border-col;
+    background-color: @background;
+    cursor:           "default";
+}
+
+mainbox {
+    spacing:          10px;
+    padding:          12px;
+    background-color: transparent;
+    children:         [ "inputbar", "listview" ];
+}
+
+/* --- Vyhledávací pole --- */
+inputbar {
+    spacing:          10px;
+    padding:          9px 12px;
+    border-radius:    11px;
+    background-color: @background-alt;
+    text-color:       @foreground;
+    children:         [ "prompt", "entry" ];
+}
+
+prompt {
+    background-color: transparent;
+    text-color:       @foreground-dim;
+}
+
+entry {
+    background-color:  transparent;
+    text-color:        @foreground;
+    cursor:            text;
+    placeholder:       "Hledat";
+    placeholder-color: @foreground-dim;
+}
+
+/* --- Seznam aplikací --- */
+listview {
+    columns:          1;
+    lines:            7;
+    cycle:            true;
+    dynamic:          true;
+    scrollbar:        false;
+    layout:           vertical;
+    fixed-height:     true;
+    spacing:          4px;
+    background-color: transparent;
+    cursor:           "default";
+}
+
+element {
+    spacing:          12px;
+    padding:          7px 10px;
+    border-radius:    11px;
+    background-color: transparent;
+    text-color:       @foreground;
+    cursor:           pointer;
+}
+
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active,
+element normal.urgent,
+element alternate.urgent {
+    background-color: transparent;
+    text-color:       @foreground;
+}
+
+element selected.normal,
+element selected.active,
+element selected.urgent {
+    background-color: @selected;
+    text-color:       @foreground;
+}
+
+element-icon {
+    size:             28px;
+    background-color: transparent;
+    text-color:       inherit;
+    cursor:           inherit;
+}
+
+element-text {
+    background-color: transparent;
+    text-color:       inherit;
+    highlight:        inherit;
+    cursor:           inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.0;
+}
+
+/* --- Chybová hláška --- */
+error-message {
+    padding:          14px;
+    border:           1px solid;
+    border-radius:    16px;
+    border-color:     @border-col;
+    background-color: @background;
+    text-color:       @foreground;
+}
+
+textbox {
+    background-color: transparent;
+    text-color:       @foreground;
+    vertical-align:   0.5;
+    horizontal-align: 0.0;
+}
