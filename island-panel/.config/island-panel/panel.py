@@ -122,6 +122,9 @@ WALL_EDGE_FADE = 120         # jak daleko od krajů obrazovky se náhledy začno
 WALL_TAGS = False            # štítek PIC v rohu obrázků (GIF a VID se značí vždy)
 WALL_CAPTION = False         # pod náhledy název a rozlišení vybrané tapety
 WALL_HINT = False            # úplně dole nápověda ke klávesám
+WALL_TRANSITION = True       # při změně tapety se nová rozroste v kruhu (False = vymění se hned)
+WALL_TRANSITION_MS = 1100    # jak dlouho kruh roste
+WALL_TRANSITION_POS = (1.0, 0.0)   # odkud kruh roste: (0, 0) levý horní roh, (1, 0) pravý horní, (0.5, 0.5) střed
 WALL_FILL_MODE = "fill"      # jak se obrázek na plochu umístí: fill, fit, stretch, center, tile
 WALL_VIDEO_OPTIONS = "no-audio loop"   # volby přehrávače u video tapet (ty potřebují program mpvpaper)
 
@@ -2709,6 +2712,7 @@ class Wallpapers:
         self.dirty, self.started = False, False
         self.on_loaded = None
         self.children = []                             # programy s tapetou, které spustil panel
+        self.fx = None                                 # přechod mezi tapetami (WallpaperFx), nastaví App
         try:
             with open(self.index_file, encoding="utf-8") as f:
                 self.index = json.load(f)
@@ -2957,20 +2961,8 @@ class Wallpapers:
                     return value
         return ""
 
-    def apply(self, path, remember=True):
-        """Nastaví tapetu. Nová se spustí přes starou a stará se ukončí až potom, takže plocha neproblikne."""
-        old = [pid for pid, _cmd in processes("swaybg", "mpvpaper")]
-        if os.path.splitext(path)[1].lower() in self.moving:
-            cmd = ["mpvpaper", "-o", WALL_VIDEO_OPTIONS, "*", path]
-        else:
-            cmd = ["swaybg", "-i", path, "-m", WALL_FILL_MODE]
-        try:
-            self.children.append(subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                                  stderr=subprocess.DEVNULL, start_new_session=True))
-        except OSError as err:
-            print(f"island-panel: {cmd[0]}: {err}", file=sys.stderr)
-            return
-        GLib.timeout_add(900, self.stop, old)
+    def apply(self, path, remember=True, animate=True):
+        """Nastaví tapetu, obvykle s přechodem (nová se rozroste v kruhu)."""
         if remember:
             try:
                 os.makedirs(STATE_DIR, exist_ok=True)
@@ -2978,6 +2970,29 @@ class Wallpapers:
                     f.write(path + "\n")
             except OSError as err:
                 print(f"island-panel: {self.state_file}: {err}", file=sys.stderr)
+        moving = os.path.splitext(path)[1].lower() in self.moving
+        if animate and not moving and WALL_TRANSITION and self.fx is not None:
+            self.fx.start(path, self.launch)
+        else:
+            self.launch(path)
+
+    def launch(self, path):
+        """Spustí program s tapetou a vrátí jeho PID. Nová tapeta se spustí přes starou
+        a stará se ukončí až o chvíli později, takže plocha neproblikne."""
+        old = [pid for pid, _cmd in processes("swaybg", "mpvpaper")]
+        if os.path.splitext(path)[1].lower() in self.moving:
+            cmd = ["mpvpaper", "-o", WALL_VIDEO_OPTIONS, "*", path]
+        else:
+            cmd = ["swaybg", "-i", path, "-m", WALL_FILL_MODE]
+        try:
+            child = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError as err:
+            print(f"island-panel: {cmd[0]}: {err}", file=sys.stderr)
+            return None
+        self.children.append(child)
+        GLib.timeout_add(900, self.stop, old)
+        return child.pid
 
     def stop(self, pids):
         for pid in pids:
@@ -3000,9 +3015,11 @@ class Wallpapers:
             return
         # Pohyblivou tapetu musí pouštět mpvpaper; swaybg spuštěný po přihlášení z ní umí nanejvýš první snímek.
         program = "mpvpaper" if os.path.splitext(path)[1].lower() in self.moving else "swaybg"
-        if any(path in cmd for _pid, cmd in processes(program)):
-            return
-        self.apply(path, remember=False)
+        for _pid, cmd in processes(program):
+            # běží s ní, nebo s její zmenšenou kopií z přechodu (screen-*.jpg v mezipaměti)
+            if path in cmd or any(arg.startswith(os.path.join(self.cache, "screen-")) for arg in cmd):
+                return
+        self.apply(path, remember=False, animate=False)
 
     def step(self, delta=None):
         """Další / předchozí tapeta bez otevírání přepínače; bez čísla náhodná."""
@@ -3016,6 +3033,191 @@ class Wallpapers:
             index = self.items.index(current) if current is not None else -1
             choice = self.items[(index + delta) % len(self.items)]
         self.apply(choice.path)
+
+
+class WallpaperFx:
+    """Přechod mezi tapetami: nad starou tapetou se z rohu rozroste kruh s novou.
+
+    Kreslí se do průhledné vrstvy hned nad tapetou (pod okny a lištou). Až kruh zakryje celou
+    plochu, spustí se swaybg se zmenšenou kopií obrázku (načte se hned), a jakmile se objeví,
+    vrstva zmizí. Zmenšená kopie má velikost obrazovky, takže swaybg navíc zabírá méně paměti."""
+
+    def __init__(self, app, store):
+        self.app, self.store = app, store
+        self.run, self.windows = 0, []
+
+    def monitors(self):
+        display = Gdk.Display.get_default()
+        found = []
+        for index in range(display.get_n_monitors()):
+            monitor = display.get_monitor(index)
+            area, scale = monitor.get_geometry(), monitor.get_scale_factor()
+            found.append((monitor, area.width, area.height, scale))
+        return found
+
+    def start(self, path, launch):
+        self.run += 1
+        run = self.run
+        self.close()                       # předchozí přechod, pokud ještě běží, se zahodí
+        screens = self.monitors()
+        sizes = [(w * s, h * s) for _m, w, h, s in screens]
+        Connections.background(lambda: self.prepare(path, sizes),
+                               lambda result: self.begin(run, path, launch, screens, result))
+
+    def prepare(self, path, sizes):
+        """(na pozadí) Zmenší obrázek na velikost obrazovky, uloží ho a připraví obrázek pro každý monitor."""
+        fmt, width, height = GdkPixbuf.Pixbuf.get_file_info(path)
+        if fmt is None:
+            raise ValueError("neznámý formát")
+        need_w, need_h = max(w for w, _h in sizes), max(h for _w, h in sizes)
+        scale = min(1.0, max(need_w / width, need_h / height))
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, max(1, round(width * scale)),
+                                                         max(1, round(height * scale)), False)
+        pixbuf = pixbuf.apply_embedded_orientation() or pixbuf
+        if pixbuf.get_has_alpha():
+            pixbuf = pixbuf.composite_color_simple(pixbuf.get_width(), pixbuf.get_height(),
+                                                   GdkPixbuf.InterpType.NEAREST, 255, 64, 0, 0)
+        os.makedirs(self.store.cache, exist_ok=True)
+        stamp = hashlib.sha1(f"{path}|{os.stat(path).st_mtime_ns}|{need_w}x{need_h}".encode()).hexdigest()[:16]
+        screen = os.path.join(self.store.cache, f"screen-{stamp}.jpg")
+        if not os.path.exists(screen):
+            pixbuf.savev(screen + ".part", "jpeg", ["quality"], ["95"])
+            os.replace(screen + ".part", screen)
+        old = sorted((f for f in os.listdir(self.store.cache) if f.startswith("screen-") and f.endswith(".jpg")),
+                     key=lambda f: os.path.getmtime(os.path.join(self.store.cache, f)))
+        for name in old[:-3]:                 # pár posledních nechat, mohou ještě běžet
+            try:
+                os.remove(os.path.join(self.store.cache, name))
+            except OSError:
+                pass
+        surfaces = []
+        for width_px, height_px in sizes:       # obrázek přesně na velikost monitoru, ať se pak jen kopíruje
+            surface = cairo.ImageSurface(cairo.FORMAT_RGB24, width_px, height_px)
+            cr = cairo.Context(surface)
+            fit = max(width_px / pixbuf.get_width(), height_px / pixbuf.get_height())
+            cr.translate((width_px - pixbuf.get_width() * fit) / 2, (height_px - pixbuf.get_height() * fit) / 2)
+            cr.scale(fit, fit)
+            Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+            cr.get_source().set_filter(cairo.FILTER_GOOD)
+            cr.paint()
+            surfaces.append(surface)
+        return screen, surfaces
+
+    def begin(self, run, path, launch, screens, result):
+        if run != self.run:
+            return
+        if not isinstance(result, tuple):      # obrázek nejde připravit: vyměnit bez přechodu
+            print(f"island-panel: přechod {path}: {result}", file=sys.stderr)
+            launch(path)
+            return
+        screen, surfaces = result
+        for (monitor, width, height, scale), surface in zip(screens, surfaces):
+            win = layer_window(self.app, "island-wallfx")
+            if GtkLayerShell.is_supported():
+                GtkLayerShell.set_layer(win, GtkLayerShell.Layer.BOTTOM)     # nad tapetou, pod okny
+                GtkLayerShell.set_monitor(win, monitor)
+                for edge in (GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT, GtkLayerShell.Edge.BOTTOM):
+                    GtkLayerShell.set_anchor(win, edge, True)
+                GtkLayerShell.set_keyboard_mode(win, GtkLayerShell.KeyboardMode.NONE)
+            ox, oy = width * WALL_TRANSITION_POS[0], height * WALL_TRANSITION_POS[1]
+            win.fx = {"surface": surface, "scale": scale, "origin": (ox, oy), "radius": 0.0,
+                      "reach": max(math.hypot(ox - cx, oy - cy) for cx in (0, width) for cy in (0, height))}
+            win.connect("draw", self.draw)
+            win.connect("realize", lambda w: w.get_window().input_shape_combine_region(cairo.Region(), 0, 0))
+            win.show()
+            self.windows.append(win)
+        self.started = None
+        self.windows[0].add_tick_callback(lambda _w, clock: self.tick(run, clock, screen, launch))
+
+    def tick(self, run, clock, screen, launch):
+        if run != self.run or not self.windows:
+            return GLib.SOURCE_REMOVE
+        now = clock.get_frame_time() / 1e6
+        if self.started is None:
+            self.started = now
+        progress = min(1.0, (now - self.started) * 1000 / max(1, WALL_TRANSITION_MS))
+        eased = 2 * progress ** 2 if progress < 0.5 else 1 - (-2 * progress + 2) ** 2 / 2   # plynulý rozjezd i dojezd
+        for win in self.windows:
+            old = win.fx["radius"]
+            win.fx["radius"] = eased * win.fx["reach"] + (2 if progress >= 1 else 0)
+            if progress >= 1:
+                win.queue_draw()
+            else:
+                self.damage(win, old, win.fx["radius"])
+        if progress < 1.0:
+            return GLib.SOURCE_CONTINUE
+        # kruh zakryl plochu: pod ním teď spustit skutečnou tapetu a počkat, až se ukáže
+        pid = launch(screen)
+        self.waited = 0
+        GLib.timeout_add(100, self.wait_ready, run, pid)
+        return GLib.SOURCE_REMOVE
+
+    @staticmethod
+    def damage(win, old, new):
+        """Překreslit jen proužek mezi minulým a novým kruhem (po pruzích), ne celou obrazovku.
+        Ušetří to hodně práce, hlavně na displeji s vysokým rozlišením."""
+        ox, oy = win.fx["origin"]
+        width, height = win.get_allocated_width(), win.get_allocated_height()
+        band = 24
+        for y0 in range(0, height, band):
+            y1 = min(height, y0 + band)
+            near = 0 if y0 <= oy <= y1 else min(abs(y0 - oy), abs(y1 - oy))
+            far = max(abs(y0 - oy), abs(y1 - oy))
+            if new <= near:
+                continue
+            reach = math.sqrt(new * new - near * near)
+            left, right = max(0.0, ox - reach), min(float(width), ox + reach)
+            spans = [(left, right)]
+            if old > far:                    # tuhle část pruhu už pokrývá minulý kruh
+                inner = math.sqrt(old * old - far * far)
+                spans = [(left, max(left, ox - inner)), (min(right, ox + inner), right)]
+            for x0, x1 in spans:
+                if x1 > x0:
+                    win.queue_draw_area(int(x0) - 1, y0, int(math.ceil(x1 - x0)) + 2, y1 - y0)
+
+    def wait_ready(self, run, pid):
+        """Počká, až se nová tapeta objeví (v Hyprlandu se to dá zjistit), a pak vrstvu schová."""
+        if run != self.run:
+            return False
+        self.waited += 100
+        hyprctl = shutil.which("hyprctl")
+        ready = False
+        if hyprctl and pid:
+            try:
+                ready = self.mapped(json.loads(run(hyprctl, "layers", "-j") or "{}"), pid)
+            except ValueError:
+                pass
+        elif self.waited >= 1200:            # bez Hyprlandu se to zjistit nedá, stačí chvíle
+            ready = True
+        if ready or self.waited >= 5000:
+            GLib.timeout_add(250, lambda: (run == self.run and self.close()) and False)
+            return False
+        return True
+
+    @classmethod
+    def mapped(cls, data, pid):
+        """Je ve výpisu 'hyprctl layers -j' vrstva tapety (namespace wallpaper) od procesu pid?"""
+        if isinstance(data, dict):
+            if data.get("namespace") == "wallpaper" and data.get("pid") == pid:
+                return True
+            data = list(data.values())
+        return isinstance(data, list) and any(cls.mapped(item, pid) for item in data)
+
+    def draw(self, win, cr):
+        fx = win.fx
+        if fx["radius"] <= 0:
+            return True
+        cr.arc(fx["origin"][0], fx["origin"][1], fx["radius"], 0, 2 * math.pi)
+        cr.clip()
+        cr.scale(1 / fx["scale"], 1 / fx["scale"])
+        cr.set_source_surface(fx["surface"], 0, 0)
+        cr.paint()
+        return True
+
+    def close(self):
+        for win in self.windows:
+            win.destroy()
+        self.windows = []
 
 
 class WallpaperPicker:
@@ -4383,6 +4585,7 @@ class App(Gtk.Application):
             self.net = Connections(self)
         if WALL_ENABLED:
             self.walls = Wallpapers()
+            self.walls.fx = WallpaperFx(self, self.walls)
             self.walls.restore()                               # po přihlášení vrátit vybranou tapetu
             self.picker = WallpaperPicker(self, self.walls)
             GLib.timeout_add_seconds(5, self.walls.warm_up)    # náhledy připravit předem na pozadí

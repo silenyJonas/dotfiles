@@ -20,6 +20,7 @@
     "clock"
   ],
   "modules-right": [
+    "network#speed",
     "network",
     "disk",
     "bluetooth",
@@ -121,6 +122,13 @@
     "tooltip-format-connected": " {device_alias}",
     "tooltip-format-discovering": " Searching...",
     "tooltip-format-disabled": "Bluetooth off"
+  },
+  "network#speed": {
+    "interval": 2,
+    "format": "\uf175 {bandwidthDownBytes:>7}  \uf176 {bandwidthUpBytes:>7}",
+    "format-disconnected": "",
+    "tooltip-format": "Download: {bandwidthDownBytes}\nUpload: {bandwidthUpBytes}",
+    "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --wifi"
   },
   "network": {
     "format-wifi": "{signalStrength}% ",

@@ -197,3 +197,9 @@ tooltip label {
   color: @fg;
   padding: 2px 4px;
 }
+
+/* rychlost sítě: tlumeně a o kousek menší */
+#network.speed {
+  color: @fg_dim;
+  font-size: 12px;
+}
