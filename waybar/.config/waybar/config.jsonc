@@ -20,7 +20,7 @@
     "clock"
   ],
   "modules-right": [
-    "network#speed",
+    "custom/netspeed",
     "network",
     "disk",
     "bluetooth",
@@ -123,11 +123,9 @@
     "tooltip-format-discovering": " Searching...",
     "tooltip-format-disabled": "Bluetooth off"
   },
-  "network#speed": {
-    "interval": 2,
-    "format": "\uf175 {bandwidthDownBytes:>7}  \uf176 {bandwidthUpBytes:>7}",
-    "format-disconnected": "",
-    "tooltip-format": "Download: {bandwidthDownBytes}\nUpload: {bandwidthUpBytes}",
+  "custom/netspeed": {
+    "exec": "python3 ~/.config/waybar/scripts/netspeed.py",
+    "return-type": "json",
     "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --wifi"
   },
   "network": {

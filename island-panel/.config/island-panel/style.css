@@ -247,6 +247,48 @@ button.media-btn.large.primary {
   padding: 22px;
 }
 
+.spin-art {
+  color: @fg;
+}
+
+.gauge-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button.media-btn.wide {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+button.media-btn.toggle-btn label {
+  color: @fg_dim;
+}
+
+button.media-btn.toggle-btn.on label {
+  color: @accent;
+}
+
+button.media-btn.toggle-btn:disabled {
+  opacity: 0.35;
+}
+
+.others {
+  padding-top: 10px;
+  border-top: 1px solid alpha(@fg, 0.08);
+}
+
+button.other-player {
+  padding: 6px;
+  border-radius: 12px;
+  background: @tile;
+  transition: background 150ms ease;
+}
+
+button.other-player:hover {
+  background: @hover;
+}
+
 progressbar.progress trough {
   background: alpha(@fg, 0.13);
   border: none;
@@ -262,20 +304,55 @@ progressbar.progress progress {
 }
 
 /* --- výkon --- */
-.perf-tile {
-  padding: 14px 8px 12px 8px;
+.perf-card {
+  padding: 14px 16px;
 }
 
-.perf-name {
-  margin-top: 4px;
+.perf-title {
+  font-size: 16px;
+  font-weight: bold;
 }
 
-.procs label {
-  padding: 2px 0;
+.perf-icon {
+  font-size: 22px;
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 12px;
+  background: @hover;
+  color: @accent;
 }
 
-.proc-col {
-  min-width: 64px;
+progressbar.progress.thin trough,
+progressbar.progress.thin progress {
+  min-height: 4px;
+}
+
+progressbar.progress.thin progress {
+  background: @accent;
+}
+
+.badge-wave {
+  color: @accent;
+}
+
+.ring-gauge {
+  color: @accent;
+}
+
+.ring-gauge.high {
+  color: @bad;
+}
+
+.battery-card {
+  color: @fg;
+}
+
+.net-graph {
+  color: @accent;
+}
+
+button.mount-btn {
+  padding: 2px 10px;
 }
 
 /* --- aplikace --- */

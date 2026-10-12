@@ -66,8 +66,8 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, GtkLayerShell, Pango, 
 # ----------------------------------------------------------------------------
 # Nastavení
 # ----------------------------------------------------------------------------
-PANEL_WIDTH = 680        # šířka panelu v pixelech
-TRIGGER_WIDTH = 680      # šířka citlivého pruhu u horního okraje (je uprostřed)
+PANEL_WIDTH = 760        # šířka panelu v pixelech
+TRIGGER_WIDTH = 760      # šířka citlivého pruhu u horního okraje (je uprostřed)
 TRIGGER_HEIGHT = 3       # výška citlivého pruhu
 OPEN_DELAY_MS = 120      # jak dlouho musí kurzor na pruhu zůstat, než panel vyjede
 CLOSE_DELAY_MS = 350     # za jak dlouho po odjetí kurzoru se panel schová
@@ -76,6 +76,8 @@ SIDE_ENABLED = True      # boční panel s hlasitostí a jasem u pravého okraje
 SIDE_TRIGGER_HEIGHT = 320  # výška citlivého pruhu u pravého okraje (je uprostřed výšky)
 SIDE_TRIGGER_WIDTH = 3     # šířka citlivého pruhu
 SLIDER_HEIGHT = 150      # výška posuvníků v bočním panelu
+SPIN_SECONDS = 8         # za jak dlouho se obal alba (deska) otočí jednou dokola; 0 = netočí se
+SPIN_FPS = 24            # kolikrát za sekundu se deska překreslí
 SIDE_OPEN_DELAY_MS = 300   # po jak dlouhé době na pravém okraji vyjede hlasitost a jas
 
 CENTER_ENABLED = True      # ovládací centrum u pravého okraje
@@ -151,6 +153,8 @@ I = {
     "image": "\uf03e", "film": "\uf008", "shuffle": "\uf074", "folder": "\uf07c", "check": "\uf00c",
     "star": "\uf005", "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
     "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
+    "gpu": "\uf26c", "updown": "\uf0ec", "bolt": "\uf0e7", "caret": "\uf0d7",
+    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
@@ -348,38 +352,60 @@ class ProcTop:
         self.prev, self.prev_t = cur, now
 
 
+def cpu_model():
+    """Název procesoru, zkrácený o zbytečné přívlastky."""
+    for line in read("/proc/cpuinfo").splitlines():
+        if line.startswith("model name"):
+            name = line.split(":", 1)[1]
+            name = re.sub(r"\((R|TM|tm|r)\)|CPU|Processor|\d+-Core|with Radeon.*|@.*", "", name)
+            return " ".join(name.split()) or "Processor"
+    return f"{os.cpu_count() or 1} threads"
+
+
 # ----------------------------------------------------------------------------
 # Data: přehrávače (MPRIS přes D-Bus, funguje se Spotify, prohlížeči, VLC, ...)
 # ----------------------------------------------------------------------------
 class Mpris:
+    """Přehrávače přes D-Bus (MPRIS): Spotify, prohlížeče, VLC... Jeden je hlavní (ten, co hraje),
+    ostatní se ukazují malé a kliknutím se na ně dá přepnout."""
     PREFIX = "org.mpris.MediaPlayer2."
     PATH = "/org/mpris/MediaPlayer2"
+    PLAYER = "org.mpris.MediaPlayer2.Player"
 
     def __init__(self):
         try:
             self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         except GLib.Error:
             self.bus = None
-        self.current = None
+        self.main, self.names = None, {}
 
-    def _call(self, dest, path, iface, method, args=None):
-        return self.bus.call_sync(dest, path, iface, method, args, None, Gio.DBusCallFlags.NONE, 250, None)
+    def _call(self, dest, path, iface, method, args=None, timeout=250):
+        return self.bus.call_sync(dest, path, iface, method, args, None, Gio.DBusCallFlags.NONE, timeout, None)
 
-    def poll(self):
-        """Vrátí informace o přehrávači (přednost má ten, který právě hraje), nebo None."""
-        self.current = None
+    def identity(self, name):
+        """Hezké jméno přehrávače (Spotify, Brave...), zjišťuje se jen jednou."""
+        if name not in self.names:
+            try:
+                value = self._call(name, self.PATH, "org.freedesktop.DBus.Properties", "Get",
+                                   GLib.Variant("(ss)", ("org.mpris.MediaPlayer2", "Identity"))).unpack()[0]
+            except GLib.Error:
+                value = ""
+            self.names[name] = str(value or name[len(self.PREFIX):].split(".")[0].capitalize())
+        return self.names[name]
+
+    def players(self):
         if not self.bus:
-            return None
+            return []
         try:
             names = self._call("org.freedesktop.DBus", "/org/freedesktop/DBus",
                                "org.freedesktop.DBus", "ListNames").unpack()[0]
         except GLib.Error:
-            return None
-        best = None
+            return []
+        found = []
         for name in sorted(n for n in names if n.startswith(self.PREFIX)):
             try:
                 props = self._call(name, self.PATH, "org.freedesktop.DBus.Properties", "GetAll",
-                                   GLib.Variant("(s)", ("org.mpris.MediaPlayer2.Player",))).unpack()[0]
+                                   GLib.Variant("(s)", (self.PLAYER,))).unpack()[0]
             except GLib.Error:
                 continue
             meta = props.get("Metadata") or {}
@@ -388,7 +414,7 @@ class Mpris:
                 artist = ", ".join(str(a) for a in artist)
             info = {
                 "bus": name,
-                "player": name[len(self.PREFIX):].split(".")[0].capitalize(),
+                "player": self.identity(name),
                 "playing": props.get("PlaybackStatus") == "Playing",
                 "title": str(meta.get("xesam:title") or ""),
                 "artist": str(artist),
@@ -396,20 +422,49 @@ class Mpris:
                 "art": str(meta.get("mpris:artUrl") or ""),
                 "length": (meta.get("mpris:length") or 0) / 1e6,
                 "position": (props.get("Position") or 0) / 1e6,
+                "trackid": str(meta.get("mpris:trackid") or ""),
+                "can_seek": bool(props.get("CanSeek")),
+                "shuffle": props.get("Shuffle"),          # None = přehrávač to neumí
+                "loop": props.get("LoopStatus"),
             }
-            if not (info["title"] or info["artist"]):
-                continue
-            if info["playing"]:
-                best = info
-                break
-            best = best or info
-        self.current = best["bus"] if best else None
-        return best
+            if info["title"] or info["artist"]:
+                found.append(info)
+        return found
 
-    def command(self, method):
-        if self.bus and self.current:
-            self.bus.call(self.current, self.PATH, "org.mpris.MediaPlayer2.Player", method,
+    def poll(self):
+        """Vrátí (hlavní přehrávač nebo None, seznam ostatních)."""
+        players = self.players()
+        main = next((p for p in players if p["bus"] == self.main), None)
+        if main is None or not main["playing"]:
+            # hlavní je vždy ten, co právě hraje; když nehraje nic, zůstává poslední
+            main = next((p for p in players if p["playing"]), None) or main or (players[0] if players else None)
+        self.main = main["bus"] if main else None
+        return main, [p for p in players if p is not main]
+
+    def command(self, method, bus=None):
+        bus = bus or self.main
+        if self.bus and bus:
+            self.bus.call(bus, self.PATH, self.PLAYER, method,
                           None, None, Gio.DBusCallFlags.NONE, 500, None, None, None)
+
+    def switch(self, bus, playing):
+        """Kliknutí na malý přehrávač: hlavní se pozastaví a kliknutý začne hrát a stane se hlavním."""
+        if self.main and self.main != bus and playing:
+            self.command("Pause")
+        self.command("Play", bus)
+        self.main = bus
+
+    def set_property(self, name, value):
+        if self.bus and self.main:
+            self.bus.call(self.main, self.PATH, "org.freedesktop.DBus.Properties", "Set",
+                          GLib.Variant("(ssv)", (self.PLAYER, name, value)), None,
+                          Gio.DBusCallFlags.NONE, 500, None, None, None)
+
+    def seek(self, trackid, seconds):
+        if self.bus and self.main and trackid:
+            self.bus.call(self.main, self.PATH, self.PLAYER, "SetPosition",
+                          GLib.Variant("(ox)", (trackid, int(seconds * 1e6))), None,
+                          Gio.DBusCallFlags.NONE, 500, None, None, None)
 
 
 # ----------------------------------------------------------------------------
@@ -615,6 +670,463 @@ class Art(Gtk.DrawingArea):
 
 
 # ----------------------------------------------------------------------------
+# Obal alba jako vinylová deska, která se při přehrávání točí
+# ----------------------------------------------------------------------------
+class SpinArt(Art):
+    """Deska s obalem alba uprostřed; když hraje, pomalu se točí, při pauze se zastaví.
+    Deska se vykreslí jednou do obrázku a pak se jen otáčí, takže to procesor skoro nepozná."""
+
+    def __init__(self, size):
+        super().__init__(size)
+        self.angle, self.playing, self.timer = 0.0, False, None
+        self.disc, self.disc_key = None, None
+        self.connect("unmap", lambda *_: self.stop_spin())
+        self.connect("map", lambda *_: self.set_playing(self.playing))
+        css(self, "spin-art")
+
+    def set_playing(self, playing):
+        self.playing = playing
+        if playing and SPIN_SECONDS > 0 and self.get_mapped():
+            if self.timer is None:
+                self.last = time.monotonic()
+                self.timer = GLib.timeout_add(max(15, 1000 // SPIN_FPS), self.on_timer)
+        else:
+            self.stop_spin()
+
+    def stop_spin(self):
+        if self.timer is not None:
+            GLib.source_remove(self.timer)
+            self.timer = None
+
+    def on_timer(self):
+        now = time.monotonic()
+        self.angle = (self.angle + 2 * math.pi * (now - self.last) / SPIN_SECONDS) % (2 * math.pi)
+        self.last = now
+        self.queue_draw()
+        return True
+
+    def _load(self, url, path):
+        self.disc = None                     # nový obal = desku vykreslit znovu
+        return super()._load(url, path)
+
+    def set_url(self, url):
+        if url != self.url:
+            self.disc = None
+        super().set_url(url)
+
+    def render_disc(self, size, scale):
+        """Deska (tmavá s drážkami) a obal alba uprostřed jako kulatá nálepka."""
+        ctx = self.get_style_context()
+        fg = ctx.get_color(Gtk.StateFlags.NORMAL)
+        found, accent = ctx.lookup_color("accent")
+        accent = accent if found else fg
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(size * scale), int(size * scale))
+        cr = cairo.Context(surface)
+        cr.scale(scale, scale)
+        c, r = size / 2, size / 2 - 1
+        cr.arc(c, c, r, 0, 2 * math.pi)
+        cr.set_source_rgb(0.04, 0.07, 0.09)
+        cr.fill()
+        cr.set_line_width(0.6)
+        for i in range(9):                    # drážky
+            cr.arc(c, c, r * (0.66 + i * 0.037), 0, 2 * math.pi)
+            cr.set_source_rgba(1, 1, 1, 0.05 if i % 2 else 0.09)
+            cr.stroke()
+        cr.arc(c, c, r - 0.8, 0, 2 * math.pi)  # okraj v barvě panelu
+        cr.set_line_width(1.6)
+        cr.set_source_rgba(accent.red, accent.green, accent.blue, 0.55)
+        cr.stroke()
+        label_r = r * 0.6
+        cr.save()
+        cr.arc(c, c, label_r, 0, 2 * math.pi)
+        cr.clip()
+        if self.pixbuf:
+            pw, ph = self.pixbuf.get_width(), self.pixbuf.get_height()
+            k = max(2 * label_r / pw, 2 * label_r / ph)
+            cr.translate(c - pw * k / 2, c - ph * k / 2)
+            cr.scale(k, k)
+            Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
+            cr.paint()
+        else:
+            cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.10)
+            cr.paint()
+            layout = self.create_pango_layout(I["music"])
+            font = self.get_pango_context().get_font_description().copy()
+            font.set_absolute_size(label_r * 0.7 * Pango.SCALE)
+            layout.set_font_description(font)
+            tw, th = layout.get_pixel_size()
+            cr.move_to(c - tw / 2, c - th / 2)
+            cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.5)
+            PangoCairo.show_layout(cr, layout)
+        cr.restore()
+        cr.arc(c, c, r * 0.045, 0, 2 * math.pi)   # dírka uprostřed
+        cr.set_source_rgb(0.04, 0.07, 0.09)
+        cr.fill()
+        return surface
+
+    def on_draw(self, _widget, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        size = min(w, h)
+        scale = self.get_scale_factor()
+        key = (size, scale, id(self.pixbuf))
+        if self.disc is None or self.disc_key != key:
+            self.disc, self.disc_key = self.render_disc(size, scale), key
+        cr.translate(w / 2, h / 2)
+        cr.rotate(self.angle)
+        cr.translate(-size / 2, -size / 2)
+        cr.scale(1 / scale, 1 / scale)
+        cr.set_source_surface(self.disc, 0, 0)
+        cr.get_source().set_filter(cairo.FILTER_GOOD)
+        cr.paint()
+        return False
+
+
+# ----------------------------------------------------------------------------
+# Kreslené prvky pro záložku Performance
+# ----------------------------------------------------------------------------
+class ScallopBadge(Gtk.DrawingArea):
+    """Vlnitý kruh s velkým číslem (vytížení v %)."""
+
+    def __init__(self, size=78):
+        super().__init__()
+        self.text = "—"
+        self.set_size_request(size, size)
+        self.set_valign(Gtk.Align.CENTER)
+        css(self, "badge-wave")
+        self.connect("draw", self.on_draw)
+
+    def set(self, text):
+        if text != self.text:
+            self.text = text
+            self.queue_draw()
+
+    def on_draw(self, _widget, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        cx, cy, radius = w / 2, h / 2, min(w, h) / 2 - 2
+        fg = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        steps = 180
+        for i in range(steps + 1):
+            angle = 2 * math.pi * i / steps
+            r = radius * (0.93 + 0.07 * math.cos(12 * angle))
+            (cr.line_to if i else cr.move_to)(cx + r * math.cos(angle), cy + r * math.sin(angle))
+        cr.close_path()
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.10)
+        cr.fill()
+        layout = self.create_pango_layout(self.text)
+        font = self.get_pango_context().get_font_description().copy()
+        font.set_absolute_size(radius * 0.52 * Pango.SCALE)
+        font.set_weight(Pango.Weight.BOLD)
+        layout.set_font_description(font)
+        tw, th = layout.get_pixel_size()
+        cr.move_to(cx - tw / 2, cy - th / 2)
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 1.0)
+        PangoCairo.show_layout(cr, layout)
+        return False
+
+
+class RingGauge(Gtk.DrawingArea):
+    """Velký kruhový ukazatel s procenty a popiskem uvnitř (Storage, Memory)."""
+
+    def __init__(self, size=96, caption="Used"):
+        super().__init__()
+        self.value, self.caption = 0.0, caption
+        self.set_size_request(size, size)
+        self.set_valign(Gtk.Align.CENTER)
+        css(self, "ring-gauge")
+        self.connect("draw", self.on_draw)
+
+    def set(self, value):
+        self.value = max(0.0, min(100.0, value or 0.0))
+        set_class(self, "high", self.value >= 85)
+        self.queue_draw()
+
+    def on_draw(self, _widget, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        fg = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        thickness = max(5.0, min(w, h) * 0.07)
+        radius = min(w, h) / 2 - thickness
+        start, sweep = math.radians(125), math.radians(290)
+        cr.set_line_width(thickness)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
+        cr.arc(w / 2, h / 2, radius, start, start + sweep)
+        cr.stroke()
+        if self.value > 0.5:
+            cr.set_source_rgba(fg.red, fg.green, fg.blue, 1.0)
+            cr.arc(w / 2, h / 2, radius, start, start + sweep * self.value / 100)
+            cr.stroke()
+        def text(value, size, bold, dy):
+            layout = self.create_pango_layout(value)
+            font = self.get_pango_context().get_font_description().copy()
+            font.set_absolute_size(size * Pango.SCALE)
+            font.set_weight(Pango.Weight.BOLD if bold else Pango.Weight.NORMAL)
+            layout.set_font_description(font)
+            tw, th = layout.get_pixel_size()
+            cr.move_to((w - tw) / 2, h / 2 + dy - th / 2)
+            PangoCairo.show_layout(cr, layout)
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 1.0)
+        text(f"{self.value:.0f}%", radius * 0.42, True, -radius * 0.1)
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.65)
+        text(self.caption, radius * 0.22, False, radius * 0.3)
+        return False
+
+
+class BatteryCard(Gtk.DrawingArea):
+    """Vysoká dlaždice baterie: zdola se plní podle nabití, dole velké procento."""
+
+    def __init__(self):
+        super().__init__()
+        self.capacity, self.status = None, ""
+        self.set_size_request(104, -1)
+        css(self, "battery-card")
+        self.connect("draw", self.on_draw)
+
+    def set(self, capacity, status):
+        if (capacity, status) != (self.capacity, self.status):
+            self.capacity, self.status = capacity, status
+            self.queue_draw()
+
+    def text(self, cr, text, size, x, y, color, alpha=1.0, bold=False, right=False, bottom=False):
+        layout = self.create_pango_layout(text)
+        font = self.get_pango_context().get_font_description().copy()
+        font.set_absolute_size(size * Pango.SCALE)
+        font.set_weight(Pango.Weight.BOLD if bold else Pango.Weight.NORMAL)
+        layout.set_font_description(font)
+        tw, th = layout.get_pixel_size()
+        cr.move_to(x - tw if right else x, y - th if bottom else y)
+        cr.set_source_rgba(color.red, color.green, color.blue, alpha)
+        PangoCairo.show_layout(cr, layout)
+
+    def on_draw(self, _widget, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        ctx = self.get_style_context()
+        fg = ctx.get_color(Gtk.StateFlags.NORMAL)
+        found, pill = ctx.lookup_color("pill")
+        found2, dark = ctx.lookup_color("pill_fg")
+        pill = pill if found else fg
+        dark = dark if found2 else fg
+        radius = 14
+        rounded_polygon(cr, [(0, 0), (w, 0), (w, h), (0, h)], radius)
+        cr.save()
+        cr.clip()
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.055)
+        cr.paint()
+        level = (self.capacity or 0) / 100
+        fill_top = h * (1 - level)
+        cr.rectangle(0, fill_top, w, h - fill_top)
+        cr.set_source_rgba(pill.red, pill.green, pill.blue, 0.92)
+        cr.fill()
+        cr.restore()
+        if self.capacity is None:
+            self.text(cr, I["plug"], 18, 14, 14, fg, 0.7)
+            self.text(cr, "Battery", 13, 14, 42, fg)
+            self.text(cr, "no battery", 11, 14, h - 14, fg, 0.6, bottom=True)
+            return False
+        on_fill = lambda y: dark if y > fill_top else fg      # barva textu podle toho, jestli je na výplni
+        icon = I["bat"][min(4, self.capacity // 20)]
+        self.text(cr, icon, 18, 14, 14, on_fill(24), 0.85)
+        self.text(cr, "Battery", 13, 14, 42, on_fill(50))
+        status = {"Not charging": "Plugged in"}.get(self.status, self.status or "")
+        self.text(cr, status, 11, w - 12, h - 46, on_fill(h - 50), 0.75, right=True, bottom=True)
+        charging = self.status in ("Charging", "Full", "Not charging")
+        self.text(cr, (I["bolt"] + " " if charging else "") + f"{self.capacity}%", 24, w - 12, h - 12,
+                  on_fill(h - 20), 1.0, bold=True, right=True, bottom=True)
+        return False
+
+
+class NetGraph(Gtk.DrawingArea):
+    """Graf rychlosti stahování (vyplněný) a odesílání (čára) za poslední dvě minuty."""
+
+    def __init__(self, height=58):
+        super().__init__()
+        self.down, self.up = [], []
+        self.set_size_request(-1, height)
+        self.set_hexpand(True)
+        css(self, "net-graph")
+        self.connect("draw", self.on_draw)
+
+    def set(self, down, up):
+        self.down, self.up = list(down), list(up)
+        self.queue_draw()
+
+    def on_draw(self, _widget, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        fg = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        if len(self.down) < 2:
+            return False
+        top = max(max(self.down), max(self.up or [0]), 1024)
+        step = w / (len(self.down) - 1)
+
+        def points(values):
+            return [(i * step, h - 1 - (h - 4) * v / top) for i, v in enumerate(values)]
+        down = points(self.down)
+        cr.move_to(0, h)
+        for x, y in down:
+            cr.line_to(x, y)
+        cr.line_to(w, h)
+        cr.close_path()
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.28)
+        cr.fill_preserve()
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.9)
+        cr.set_line_width(1.2)
+        cr.new_path()
+        for i, (x, y) in enumerate(down):
+            (cr.line_to if i else cr.move_to)(x, y)
+        cr.stroke()
+        if len(self.up) == len(self.down):
+            cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.45)
+            cr.set_dash([3, 3])
+            for i, (x, y) in enumerate(points(self.up)):
+                (cr.line_to if i else cr.move_to)(x, y)
+            cr.stroke()
+        return False
+
+
+# ----------------------------------------------------------------------------
+# Data pro záložku Performance: grafická karta, síť, disky
+# ----------------------------------------------------------------------------
+def human_bytes(value, per_second=False):
+    for unit in ("B", "kB", "MB", "GB", "TB"):
+        if value < 999.5 or unit == "TB":
+            number = f"{value:.1f}" if value < 10 and unit != "B" else f"{value:.0f}"
+            return f"{number} {unit}" + ("/s" if per_second else "")
+        value /= 1000
+
+
+class Gpu:
+    """Grafická karta: vytížení (AMD, NVIDIA), u Intelu aktuální takt vůči maximu; teplota, je-li čidlo."""
+
+    def __init__(self):
+        self.name, self.kind, self.paths, self.temp_path = "GPU", None, {}, None
+        self.usage, self.temp, self.metric = None, None, "Usage"
+        try:
+            cards = sorted(c for c in os.listdir("/sys/class/drm") if re.fullmatch(r"card\d+", c))
+        except OSError:
+            cards = []
+        found = []
+        for card in cards:
+            base = f"/sys/class/drm/{card}"
+            device = os.path.join(base, "device")
+            driver = os.path.basename(os.path.realpath(os.path.join(device, "driver")))
+            info = {"base": base, "device": device, "driver": driver, "slot": os.path.basename(os.path.realpath(device))}
+            if os.path.exists(os.path.join(device, "gpu_busy_percent")):
+                info["kind"] = "busy"
+            elif os.path.exists(os.path.join(base, "gt_act_freq_mhz")):
+                info["kind"] = "freq"
+            elif driver == "nvidia" and shutil.which("nvidia-smi"):
+                info["kind"] = "nvidia"
+            else:
+                continue
+            found.append(info)
+        found.sort(key=lambda i: {"busy": 0, "nvidia": 1, "freq": 2}[i["kind"]])
+        if not found:
+            return
+        gpu = found[0]
+        self.kind, self.paths = gpu["kind"], gpu
+        self.metric = "Clock" if self.kind == "freq" else "Usage"
+        try:
+            for hw in os.listdir(os.path.join(gpu["device"], "hwmon")):
+                path = os.path.join(gpu["device"], "hwmon", hw, "temp1_input")
+                if os.path.exists(path):
+                    self.temp_path = path
+        except OSError:
+            pass
+        self.name = self.lookup_name(gpu)
+
+    @staticmethod
+    def lookup_name(gpu):
+        vendor = {"amdgpu": "AMD", "radeon": "AMD", "i915": "Intel", "xe": "Intel", "nvidia": "NVIDIA",
+                  "nouveau": "NVIDIA"}.get(gpu["driver"], "GPU")
+        text = run("lspci", "-mm", "-s", gpu["slot"]) if shutil.which("lspci") else ""
+        fields = re.findall(r'"([^"]*)"', text)
+        if len(fields) >= 3:
+            model = fields[2]
+            inner = re.search(r"\[([^\]]+)\]", model)
+            return f"{vendor} {inner.group(1) if inner else model}"
+        return f"{vendor} graphics"
+
+    def sample(self):
+        try:
+            if self.kind == "busy":
+                self.usage = float(read(os.path.join(self.paths["device"], "gpu_busy_percent")))
+            elif self.kind == "freq":
+                now = float(read(os.path.join(self.paths["base"], "gt_act_freq_mhz")))
+                top = float(read(os.path.join(self.paths["base"], "gt_RP0_freq_mhz"), "0") or
+                            read(os.path.join(self.paths["base"], "gt_max_freq_mhz")))
+                self.usage = 100 * now / top if top else None
+            elif self.kind == "nvidia":
+                out = run("nvidia-smi", "--query-gpu=utilization.gpu,temperature.gpu",
+                          "--format=csv,noheader,nounits", timeout=3).split(",")
+                self.usage, self.temp = float(out[0]), float(out[1])
+                return
+        except (ValueError, IndexError, OSError):
+            self.usage = None
+        if self.temp_path:
+            try:
+                self.temp = int(read(self.temp_path)) / 1000
+            except ValueError:
+                self.temp = None
+
+
+class NetStats:
+    """Rychlost a celkový přenos přes skutečná síťová rozhraní (virtuální se nepočítají)."""
+    SKIP = ("lo", "docker", "veth", "virbr", "br-", "tun", "wg")
+
+    def __init__(self):
+        self.down = self.up = 0.0
+        self.history_down, self.history_up = [0.0] * 60, [0.0] * 60
+        self.total = (0, 0)
+        self.last, self.stamp = None, None
+
+    def counters(self):
+        down = up = 0
+        for line in read("/proc/net/dev").splitlines()[2:]:
+            name, _, data = line.partition(":")
+            if name.strip().startswith(self.SKIP):
+                continue
+            fields = data.split()
+            if len(fields) >= 9:
+                down += int(fields[0])
+                up += int(fields[8])
+        return down, up
+
+    def sample(self):
+        now, moment = self.counters(), time.monotonic()
+        if self.last is not None and moment > self.stamp:
+            span = moment - self.stamp
+            self.down, self.up = (now[0] - self.last[0]) / span, (now[1] - self.last[1]) / span
+            self.history_down = self.history_down[1:] + [self.down]
+            self.history_up = self.history_up[1:] + [self.up]
+        self.last, self.stamp, self.total = now, moment, now
+
+
+def list_mounts():
+    """Připojené disky: (zařízení, kam je připojené), bez dočasných a virtuálních."""
+    found, seen = [], set()
+    for line in read("/proc/mounts").splitlines():
+        parts = line.split()
+        if len(parts) < 3 or not parts[0].startswith("/dev/") or parts[0].startswith("/dev/loop") \
+                or parts[2] in ("squashfs", "iso9660"):
+            continue
+        device, point = parts[0], parts[1].replace("\\040", " ")
+        if device in seen or point.startswith(("/boot", "/snap", "/var/lib/snapd")):
+            continue
+        seen.add(device)
+        found.append((device, point))
+    found.sort(key=lambda m: (m[1] != "/", m[1]))
+    return found or [("/", "/")]
+
+
+def disk_usage(point):
+    try:
+        st = os.statvfs(point)
+    except OSError:
+        return 0.0, 0.0, 0.0
+    total, free = st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize
+    return (total - free), total, (100.0 * (total - free) / total if total else 0.0)
+
+
+# ----------------------------------------------------------------------------
 # Kalendář
 # ----------------------------------------------------------------------------
 class Calendar(Gtk.Box):
@@ -763,7 +1275,9 @@ class Panel(AutoHide):
 
     def __init__(self, app):
         self.app = app
-        self.stats, self.procs, self.mpris = Stats(), ProcTop(), Mpris()
+        self.stats, self.mpris = Stats(), Mpris()
+        self.gpu, self.net = Gpu(), NetStats()
+        self.mount_index = 0
         self.visible = False
         self.close_timer = self.tick_timer = None
         self.weather_at, self.weather_busy = 0.0, False
@@ -863,16 +1377,26 @@ class Panel(AutoHide):
         bottom.pack_start(self.calendar, True, True, 0)
 
         gauges = vbox(6, "tile", "gauges")
-        self.g_cpu, self.g_ram, self.g_disk = Gauge(50, I["cpu"], 4), Gauge(50, I["ram"], 4), Gauge(50, I["disk"], 4)
-        for g in (self.g_cpu, self.g_ram, self.g_disk):
-            gauges.pack_start(g, True, False, 0)
+        self.g_values = {}
+        for key, caption in (("cpu", "CPU"), ("ram", "RAM"), ("disk", "Disk")):
+            row = hbox(10)
+            gauge = Gauge(44, I[key], 4)
+            text = vbox(0)
+            text.set_valign(Gtk.Align.CENTER)
+            value = label("0%", "gauge-value", xalign=0)
+            text.pack_start(value, False, False, 0)
+            text.pack_start(label(caption, "dim", "small", xalign=0), False, False, 0)
+            row.pack_start(gauge, False, False, 0)
+            row.pack_start(text, True, True, 0)
+            gauges.pack_start(row, True, False, 0)
+            self.g_values[key] = (gauge, value)
         bottom.pack_start(gauges, False, False, 0)
         left.pack_start(bottom, True, True, 0)
         page.pack_start(left, True, True, 0)
 
         mini = vbox(6, "tile", "mini-media")
-        mini.set_size_request(168, -1)
-        self.m_art = Art(112)
+        mini.set_size_request(180, -1)
+        self.m_art = SpinArt(150)
         self.m_title = label("Nothing playing", "media-title", ellipsize=True)
         self.m_artist = label("", "dim", ellipsize=True)
         mini.pack_start(self.m_art, True, False, 4)
@@ -900,75 +1424,196 @@ class Panel(AutoHide):
         return row, play_btn
 
     def build_media(self):
-        page = hbox(20, "page", "tile", "media-page")
-        self.b_art = Art(210, 16)
+        page = hbox(22, "page", "tile", "media-page")
+        self.b_art = SpinArt(220)
+        self.b_art.set_valign(Gtk.Align.CENTER)
         page.pack_start(self.b_art, False, False, 0)
-        info = vbox(6)
+
+        info = vbox(4)
         info.set_valign(Gtk.Align.CENTER)
         self.b_player = label("", "chip", xalign=0)
         self.b_player.set_halign(Gtk.Align.START)
         self.b_title = label("Nothing playing", "media-big-title", xalign=0, ellipsize=True)
         self.b_artist = label("Play some music or a video and it shows up here.", xalign=0, ellipsize=True)
         self.b_album = label("", "dim", xalign=0, ellipsize=True)
+        seek = Gtk.EventBox()                       # klik do lišty = skok na to místo
+        seek.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        seek.connect("button-press-event", self.on_seek)
         self.b_progress = css(Gtk.ProgressBar(), "progress")
-        self.b_progress.set_margin_top(14)
+        self.b_progress.set_margin_top(7)          # větší plocha pro kliknutí
+        self.b_progress.set_margin_bottom(5)
+        seek.add(self.b_progress)
+        seek.set_margin_top(5)
         times = hbox(0)
-        self.b_pos = label("", "dim", xalign=0)
-        self.b_len = label("", "dim", xalign=1)
+        self.b_pos = label("", "dim", "small", xalign=0)
+        self.b_len = label("", "dim", "small", xalign=1)
         times.pack_start(self.b_pos, True, True, 0)
         times.pack_start(self.b_len, True, True, 0)
-        ctrl, self.b_play = self.media_controls(small=False)
-        ctrl.set_margin_top(10)
-        for w in (self.b_player, self.b_title, self.b_artist, self.b_album, self.b_progress, times, ctrl):
-            info.pack_start(w, False, False, 0)
-        page.pack_start(info, True, True, 0)
+
+        row = hbox(8, "media-controls")
+        row.set_halign(Gtk.Align.START)
+        row.set_margin_top(8)
+        self.b_shuffle = css(Gtk.Button(label=I["shuffle"]), "flat", "media-btn", "toggle-btn")
+        prev_btn = css(Gtk.Button(label=I["prev"]), "flat", "media-btn", "large")
+        self.b_play = css(Gtk.Button(label=I["play"]), "flat", "media-btn", "primary", "large", "wide")
+        next_btn = css(Gtk.Button(label=I["next"]), "flat", "media-btn", "large")
+        self.b_repeat = css(Gtk.Button(label=I["repeat"]), "flat", "media-btn", "toggle-btn")
+        self.b_shuffle.connect("clicked", lambda *_: self.toggle_shuffle())
+        prev_btn.connect("clicked", lambda *_: self.media_command("Previous"))
+        self.b_play.connect("clicked", lambda *_: self.media_command("PlayPause"))
+        next_btn.connect("clicked", lambda *_: self.media_command("Next"))
+        self.b_repeat.connect("clicked", lambda *_: self.cycle_repeat())
+        for button in (self.b_shuffle, prev_btn, self.b_play, next_btn, self.b_repeat):
+            row.pack_start(button, False, False, 0)
+        for widget in (self.b_player, self.b_title, self.b_artist, self.b_album, seek, times, row):
+            info.pack_start(widget, False, False, 0)
+        right = vbox(0)
+        right.pack_start(info, True, True, 0)
+
+        # ostatní přehrávače (třeba video v prohlížeči) malé dole; klik je prohodí s hlavním
+        self.others = vbox(5, "others")
+        self.others.pack_start(label("Also open", "dim", "small", xalign=0), False, False, 0)
+        self.others_list = hbox(6)
+        self.others.pack_start(self.others_list, False, False, 0)
+        self.others.set_no_show_all(True)
+        self.others_shown = None
+        right.pack_start(self.others, False, False, 0)
+        page.pack_start(right, True, True, 0)
         return page
+
+    def other_card(self, info):
+        button = css(Gtk.Button(), "flat", "other-player")
+        button.set_size_request(214, -1)
+        row = hbox(8)
+        art = Art(38, 8)
+        art.set_url(info["art"])
+        row.pack_start(art, False, False, 0)
+        text = vbox(0)
+        text.set_valign(Gtk.Align.CENTER)
+        text.pack_start(label(info["title"] or "Untitled", xalign=0, ellipsize=True), False, False, 0)
+        text.pack_start(label(info["player"], "dim", "small", xalign=0, ellipsize=True), False, False, 0)
+        row.pack_start(text, True, True, 0)
+        row.pack_start(label(I["pause"] if info["playing"] else I["play"], "dim"), False, False, 2)
+        button.add(row)
+        button.connect("clicked", lambda _b, bus=info["bus"]: self.switch_player(bus))
+        return button
+
+    def switch_player(self, bus):
+        self.mpris.switch(bus, bool(self.media and self.media["playing"]))
+        GLib.timeout_add(300, lambda: self.refresh_media() and False)
+
+    def toggle_shuffle(self):
+        if self.media and self.media["shuffle"] is not None:
+            self.mpris.set_property("Shuffle", GLib.Variant("b", not self.media["shuffle"]))
+            GLib.timeout_add(250, lambda: self.refresh_media() and False)
+
+    def cycle_repeat(self):
+        if self.media and self.media["loop"] is not None:
+            following = {"None": "Playlist", "Playlist": "Track", "Track": "None"}.get(self.media["loop"], "None")
+            self.mpris.set_property("LoopStatus", GLib.Variant("s", following))
+            GLib.timeout_add(250, lambda: self.refresh_media() and False)
+
+    def on_seek(self, box, event):
+        info = self.media
+        if not info or info["length"] <= 0 or not info["can_seek"]:
+            return False
+        fraction = max(0.0, min(1.0, event.x / max(1, box.get_allocated_width())))
+        try:
+            self.mpris.seek(info["trackid"], fraction * info["length"])
+        except (TypeError, GLib.Error):
+            pass
+        GLib.timeout_add(250, lambda: self.refresh_media() and False)
+        return True
 
     def build_performance(self):
-        page = vbox(8, "page")
-        row = hbox(8)
-        row.set_homogeneous(True)
-        self.p_gauges = {}
-        for key, title in (("cpu", "CPU"), ("ram", "Memory"), ("temp", "Temperature"), ("disk", "Disk")):
-            tile = vbox(4, "tile", "perf-tile")
-            gauge = css(Gauge(84, "0%", 6), "big")
-            name = label(f"{I[key]}  {title}", "perf-name")
-            detail = label("", "dim")
-            tile.pack_start(gauge, False, False, 0)
-            tile.pack_start(name, False, False, 0)
-            tile.pack_start(detail, False, False, 0)
-            row.pack_start(tile, True, True, 0)
-            self.p_gauges[key] = (gauge, detail)
-        page.pack_start(row, False, False, 0)
+        page = hbox(8, "page")
+        grid = vbox(8)
+        top = hbox(8)
+        top.set_homogeneous(True)
+        self.p_cpu = self.perf_card(top, "cpu", "CPU", cpu_model())
+        self.p_gpu = self.perf_card(top, "gpu", "GPU", self.gpu.name)
+        grid.pack_start(top, False, False, 0)
 
-        lower = hbox(8)
-        chart = vbox(6, "tile")
-        chart.pack_start(label("CPU over the last 2 minutes", "dim", xalign=0), False, False, 0)
-        self.p_spark = Sparkline(84)
-        chart.pack_start(self.p_spark, True, True, 0)
-        lower.pack_start(chart, True, True, 0)
+        bottom = hbox(8)
+        storage = hbox(12, "tile", "perf-card")
+        self.p_disk = RingGauge(100)
+        storage.pack_start(self.p_disk, False, False, 0)
+        sinfo = vbox(6)
+        sinfo.set_valign(Gtk.Align.CENTER)
+        sinfo.pack_start(label("Storage", "perf-title", xalign=0), False, False, 0)
+        self.p_mount_label = label("", "small")
+        self.p_mount = css(Gtk.Button(), "flat", "chip-btn", "mount-btn")
+        self.p_mount.add(self.p_mount_label)
+        self.p_mount.connect("clicked", lambda *_: self.next_mount())
+        sinfo.pack_start(self.p_mount, False, False, 0)
+        self.p_disk_detail = label("", "dim", "small", xalign=0, ellipsize=True)
+        self.p_disk_detail.set_max_width_chars(16)        # dlouhá cesta nesmí kartu roztáhnout
+        self.p_disk_detail.set_width_chars(16)
+        sinfo.pack_start(self.p_disk_detail, False, False, 0)
+        storage.pack_start(sinfo, False, False, 0)
+        bottom.pack_start(storage, False, False, 0)
 
-        procs = vbox(3, "tile", "procs")
-        procs.set_size_request(280, -1)
-        head = hbox(0)
-        head.pack_start(label("Top processes", "dim", xalign=0), True, True, 0)
-        head.pack_start(css(label("CPU", "dim", xalign=1), "proc-col"), False, False, 0)
-        head.pack_start(css(label("RAM", "dim", xalign=1), "proc-col"), False, False, 0)
-        procs.pack_start(head, False, False, 0)
-        self.p_rows = []
-        for _ in range(5):
-            line = hbox(0)
-            name = label("", xalign=0, ellipsize=True)
-            cpu = css(label("", xalign=1), "proc-col")
-            mem = css(label("", "dim", xalign=1), "proc-col")
-            line.pack_start(name, True, True, 0)
-            line.pack_start(cpu, False, False, 0)
-            line.pack_start(mem, False, False, 0)
-            procs.pack_start(line, False, False, 0)
-            self.p_rows.append((name, cpu, mem))
-        lower.pack_start(procs, False, False, 0)
-        page.pack_start(lower, True, True, 0)
+        net = vbox(4, "tile", "perf-card")
+        net.pack_start(label(f"{I['updown']}  Network", "perf-title", xalign=0), False, False, 0)
+        self.p_net_graph = NetGraph(54)
+        net.pack_start(self.p_net_graph, True, True, 2)
+        self.p_net = {}
+        for key, icon, title in (("down", "download", "Download"), ("up", "upload", "Upload"), ("total", "updown", "Total")):
+            line = hbox(6)
+            line.pack_start(label(f"{I[icon]}  {title}", "dim", "small", xalign=0), True, True, 0)
+            value = label("", "small", xalign=1)
+            line.pack_start(value, False, False, 0)
+            net.pack_start(line, False, False, 0)
+            self.p_net[key] = value
+        bottom.pack_start(net, True, True, 0)
+
+        memory = vbox(4, "tile", "perf-card")
+        memory.pack_start(label(f"{I['ram']}  Memory", "perf-title", xalign=0), False, False, 0)
+        self.p_ram = RingGauge(100)
+        memory.pack_start(self.p_ram, True, True, 0)
+        self.p_ram_detail = label("", "dim", "small")
+        memory.pack_start(self.p_ram_detail, False, False, 0)
+        bottom.pack_start(memory, False, False, 0)
+        grid.pack_start(bottom, True, True, 0)
+        page.pack_start(grid, True, True, 0)
+
+        self.p_battery = BatteryCard()
+        page.pack_start(self.p_battery, False, False, 0)
         return page
+
+    def perf_card(self, parent, icon, title, subtitle):
+        card = hbox(10, "tile", "perf-card")
+        left = vbox(8)
+        left.set_valign(Gtk.Align.CENTER)
+        head = hbox(10)
+        head.pack_start(label(I[icon], "perf-icon"), False, False, 0)
+        names = vbox(0)
+        names.set_valign(Gtk.Align.CENTER)
+        names.pack_start(label(title, "perf-title", xalign=0), False, False, 0)
+        names.pack_start(label(subtitle, "dim", "small", xalign=0, ellipsize=True), False, False, 0)
+        head.pack_start(names, True, True, 0)
+        left.pack_start(head, False, False, 0)
+        temp_row = vbox(4)
+        temp = label("", "small", xalign=0)
+        bar = css(Gtk.ProgressBar(), "progress", "thin")
+        temp_row.pack_start(temp, False, False, 0)
+        temp_row.pack_start(bar, False, False, 0)
+        temp_row.set_no_show_all(True)
+        left.pack_start(temp_row, False, False, 0)
+        card.pack_start(left, True, True, 0)
+        right = vbox(2)
+        right.set_valign(Gtk.Align.CENTER)
+        metric = label("Usage", "dim", "small")
+        badge = ScallopBadge(76)
+        right.pack_start(metric, False, False, 0)
+        right.pack_start(badge, False, False, 0)
+        card.pack_start(right, False, False, 0)
+        parent.pack_start(card, True, True, 0)
+        return {"temp": temp, "bar": bar, "temp_row": temp_row, "badge": badge, "metric": metric}
+
+    def next_mount(self):
+        self.mount_index = (self.mount_index + 1) % max(1, len(list_mounts()))
+        self.refresh_performance()
 
     def build_apps(self):
         page = vbox(8, "page")
@@ -1142,8 +1787,9 @@ class Panel(AutoHide):
     # ------------------------------------------------------------ obnova dat
     def background_sample(self):
         self.stats.sample()
+        self.net.sample()
         if self.visible and self.tab == "performance":
-            self.procs.sample()
+            self.gpu.sample()
             self.refresh_performance()
         return True
 
@@ -1168,41 +1814,68 @@ class Panel(AutoHide):
                 icon = I["plug"] if bat[1] in ("Charging", "Full", "Not charging") else I["bat"][min(4, bat[0] // 20)]
                 up += f"   {icon}  {bat[0]} %"
             self.s_uptime.set_text(up)
-            self.g_cpu.set(self.stats.cpu)
-            self.g_ram.set(self.stats.ram()[2])
-            self.g_disk.set(self.stats.disk()[2])
+            for key, value in (("cpu", self.stats.cpu), ("ram", self.stats.ram()[2]), ("disk", self.stats.disk()[2])):
+                gauge, text = self.g_values[key]
+                gauge.set(value)
+                text.set_text(f"{value:.0f}%")
             self.maybe_fetch_weather()
         elif self.tab == "performance":
             self.refresh_performance()
 
     def refresh_performance(self):
+        def card(widgets, usage, temp, metric="Usage"):
+            widgets["badge"].set(f"{usage:.0f}%" if usage is not None else "—")
+            widgets["metric"].set_text(metric)
+            if temp is None:
+                widgets["temp_row"].hide()
+            else:
+                widgets["temp"].set_text(f"{I['temp']}  {temp:.0f}°C")
+                widgets["bar"].set_fraction(max(0.0, min(1.0, temp / 100)))
+                widgets["temp_row"].show_all()
+        card(self.p_cpu, self.stats.cpu, self.stats.temp())
+        card(self.p_gpu, self.gpu.usage, self.gpu.temp, self.gpu.metric)
+        bat = self.stats.battery()
+        self.p_battery.set(bat[0] if bat else None, bat[1] if bat else "")
+        mounts = list_mounts()
+        device, point = mounts[self.mount_index % len(mounts)]
+        used, total, pct = disk_usage(point)
+        self.p_disk.set(pct)
+        self.p_mount_label.set_text(f"{os.path.basename(device)}  {I['caret']}" if len(mounts) > 1
+                                    else os.path.basename(device))
+        self.p_disk_detail.set_text(f"{human_bytes(used)} / {human_bytes(total)}  ·  {point}")
+        net = self.net
+        self.p_net_graph.set(net.history_down, net.history_up)
+        self.p_net["down"].set_text(human_bytes(net.down, True))
+        self.p_net["up"].set_text(human_bytes(net.up, True))
+        self.p_net["total"].set_text(f"{I['download']} {human_bytes(net.total[0])}   {I['upload']} {human_bytes(net.total[1])}")
         used, total, pct = self.stats.ram()
-        dused, dtotal, dpct = self.stats.disk()
-        temp = self.stats.temp()
-        gauge, detail = self.p_gauges["cpu"]
-        gauge.set(self.stats.cpu, f"{self.stats.cpu:.0f}%")
-        detail.set_text(f"{os.cpu_count() or 1} threads")
-        gauge, detail = self.p_gauges["ram"]
-        gauge.set(pct, f"{pct:.0f}%")
-        detail.set_text(f"{used:.1f} / {total:.1f} GB")
-        gauge, detail = self.p_gauges["temp"]
-        gauge.set(temp or 0, f"{temp:.0f}°" if temp is not None else "—")
-        detail.set_text("CPU sensor" if temp is not None else "no sensor found")
-        gauge, detail = self.p_gauges["disk"]
-        gauge.set(dpct, f"{dpct:.0f}%")
-        detail.set_text(f"{dused:.0f} / {dtotal:.0f} GB")
-        self.p_spark.set(self.stats.history)
-        rows = self.procs.rows + [("", None, None)] * 5
-        for (name, cpu, mem), (n, c, m) in zip(self.p_rows, rows):
-            name.set_text(n)
-            cpu.set_text(f"{c:.1f}%" if c is not None else "")
-            mem.set_text(f"{m:.0f} MB" if m is not None else "")
+        self.p_ram.set(pct)
+        self.p_ram_detail.set_text(f"{used:.1f} / {total:.1f} GB")
 
     def refresh_media(self):
-        info = self.media = self.mpris.poll()
+        info, others = self.mpris.poll()
+        self.media = info
         playing = bool(info and info["playing"])
         for btn in (self.m_play, self.b_play):
             btn.set_label(I["pause"] if playing else I["play"])
+        for art in (self.m_art, self.b_art):
+            art.set_playing(playing)
+        signature = [(p["bus"], p["title"], p["playing"], p["art"]) for p in others]
+        if signature != self.others_shown:
+            self.others_shown = signature
+            for child in self.others_list.get_children():
+                self.others_list.remove(child)
+            for other in others[:2]:
+                self.others_list.pack_start(self.other_card(other), False, False, 0)
+            self.others_list.show_all()
+            self.others.set_visible(bool(others))
+            for child in self.others.get_children():
+                child.show_all()
+        for button, key in ((self.b_shuffle, "shuffle"), (self.b_repeat, "loop")):
+            supported = bool(info) and info[key] is not None
+            button.set_sensitive(supported)
+            set_class(button, "on", supported and info[key] not in (False, "None"))
+        self.b_repeat.set_label(I["repeat"] + ("¹" if info and info["loop"] == "Track" else ""))
         if not info:
             self.m_title.set_text("Nothing playing")
             self.m_artist.set_text("")
@@ -1224,6 +1897,7 @@ class Panel(AutoHide):
         self.b_title.set_text(info["title"] or "Untitled")
         self.b_artist.set_text(info["artist"])
         self.b_album.set_text(info["album"])
+        self.b_album.set_visible(bool(info["album"]))
         self.b_art.set_url(info["art"])
         if info["length"] > 0:
             self.b_progress.set_fraction(max(0.0, min(1.0, info["position"] / info["length"])))
