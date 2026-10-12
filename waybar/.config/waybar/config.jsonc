@@ -38,6 +38,7 @@
   },
   "clock": {
     "timezone": "Europe/Prague",
+    "locale": "en_US.UTF-8",
     "format": "{:%H:%M %d.%m.}",
     "tooltip-format": "{calendar}",
     "calendar": {
@@ -47,20 +48,20 @@
   "cpu": {
     "format": "{usage}% CPU",
     "tooltip": true,
-    "tooltip-format": "Využití CPU: {usage}%\nJádra: {cores}",
+    "tooltip-format": "CPU usage: {usage}%\nCores: {cores}",
     "on-click": "gnome-system-monitor"
   },
   "memory": {
     "format": "{}% RAM",
     "tooltip": true,
-    "tooltip-format": "RAM v použití: {used} / {total} ({percentage}%)",
+    "tooltip-format": "RAM in use: {used} / {total} ({percentage}%)",
     "on-click": "gnome-system-monitor"
   },
   "temperature": {
     "hwmon-path": "/sys/class/hwmon/hwmon8/temp1_input",
     "format": "{temperatureC}°C ",
     "tooltip": true,
-    "tooltip-format": "CPU teplota: {temperatureC}°C",
+    "tooltip-format": "CPU temperature: {temperatureC}°C",
     "interval": 5,
     "states": {
       "warning": 75,
@@ -105,7 +106,7 @@
     "format-alt": "{time} {icon}",
     "format-icons": ["", "", "", "", ""],
     "tooltip": true,
-    "tooltip-format": "Stav baterie: {capacity}%\nZbývající čas: {time}",
+    "tooltip-format": "Battery: {capacity}%\nTime left: {time}",
     "states": {
       "warning": 30,
       "critical": 15
@@ -122,16 +123,16 @@
     "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --bluetooth",
     "tooltip-format": "{status}",
     "tooltip-format-connected": " {device_alias}",
-    "tooltip-format-discovering": " Hledání...",
-    "tooltip-format-disabled": "Bluetooth vypnutý"
+    "tooltip-format-discovering": " Searching...",
+    "tooltip-format-disabled": "Bluetooth off"
   },
   "network": {
     "format-wifi": "({signalStrength}%) ",
     "format-ethernet": "{ifname} 󰈀",
-    "format-disconnected": " Odpojeno",
+    "format-disconnected": " Disconnected",
     "tooltip-format-wifi": " {essid} ({signalStrength}%) \nIP: {ipaddr}/{cidr}",
     "tooltip-format-ethernet": " {ifname} {ipaddr}/{cidr}",
-    "tooltip-format-disconnected": "Odpojeno",
+    "tooltip-format-disconnected": "Disconnected",
     "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --wifi",
     "max-length": 50
   },
@@ -142,12 +143,12 @@
     "on-scroll-up": "brightnessctl set +5%",
     "on-scroll-down": "brightnessctl set 5%-",
     "tooltip": true,
-    "tooltip-format": "Jas: {percent}%"
+    "tooltip-format": "Brightness: {percent}%"
   },
   "disk": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Volné místo: {free} / {total} ({percentage_free}%)",
+    "tooltip-format": "Free space: {free} / {total} ({percentage_free}%)",
     "on-click": "dolphin",
     "interval": 30,
     "path": "/"
@@ -156,38 +157,38 @@
     "format": "⏻",
     "on-click": "$HOME/.config/rofi/powermenu/type-1/powermenu.sh",
     "tooltip": true,
-    "tooltip-format": "Menu vypnutí"
+    "tooltip-format": "Power menu"
   },
 
   /* --- CUSTOM LAUNCHERS --- */
   "custom/brave": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit Brave",
+    "tooltip-format": "Open Brave",
     "on-click": "nohup brave-browser >/dev/null 2>&1 &"
   },
   "custom/spotify": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit Spotify",
+    "tooltip-format": "Open Spotify",
     "on-click": "flatpak run com.spotify.Client"
   },
   "custom/spf": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit Yazi",
+    "tooltip-format": "Open Yazi",
     "on-click": "alacritty -e yazi"
   },
   "custom/codium": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit VSCodium",
+    "tooltip-format": "Open VSCodium",
     "on-click": "codium --ozone-platform=wayland"
   },
   "custom/discord": {
     "format": "",
     "tooltip": true,
-    "tooltip-format": "Spustit Discord",
+    "tooltip-format": "Open Discord",
     "on-click": "flatpak run dev.vencord.Vesktop"
   }
 }

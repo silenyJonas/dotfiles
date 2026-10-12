@@ -117,7 +117,7 @@ WALL_VIDEO_OPTIONS = "no-audio loop"   # volby přehrávače u video tapet (ty p
 
 WEATHER_ENABLED = True   # False = počasí se nestahuje vůbec
 WEATHER_CITY = ""        # např. "Praha"; prázdné = služba odhadne místo podle IP adresy
-WEATHER_URL = "https://wttr.in/{city}?format=j1&lang=cs"
+WEATHER_URL = "https://wttr.in/{city}?format=j1&lang=en"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(GLib.get_user_cache_dir(), "island-panel")
@@ -142,9 +142,9 @@ I = {
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
 
-MONTHS = ["Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec",
-          "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
-WEEKDAYS = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
 
 # ----------------------------------------------------------------------------
@@ -794,7 +794,7 @@ class Panel(AutoHide):
         wtext = vbox(0)
         wtext.set_valign(Gtk.Align.CENTER)
         self.w_temp = label("—", "weather-temp", xalign=0)
-        self.w_desc = label("načítám", "dim", xalign=0, ellipsize=True)
+        self.w_desc = label("loading", "dim", xalign=0, ellipsize=True)
         wtext.pack_start(self.w_temp, False, False, 0)
         wtext.pack_start(self.w_desc, False, False, 0)
         weather.pack_start(self.w_icon, False, False, 0)
@@ -847,7 +847,7 @@ class Panel(AutoHide):
         mini = vbox(6, "tile", "mini-media")
         mini.set_size_request(168, -1)
         self.m_art = Art(112)
-        self.m_title = label("Nic nehraje", "media-title", ellipsize=True)
+        self.m_title = label("Nothing playing", "media-title", ellipsize=True)
         self.m_artist = label("", "dim", ellipsize=True)
         mini.pack_start(self.m_art, True, False, 4)
         mini.pack_start(self.m_title, False, False, 0)
@@ -881,8 +881,8 @@ class Panel(AutoHide):
         info.set_valign(Gtk.Align.CENTER)
         self.b_player = label("", "chip", xalign=0)
         self.b_player.set_halign(Gtk.Align.START)
-        self.b_title = label("Nic nehraje", "media-big-title", xalign=0, ellipsize=True)
-        self.b_artist = label("Spusť hudbu nebo video a objeví se tady.", xalign=0, ellipsize=True)
+        self.b_title = label("Nothing playing", "media-big-title", xalign=0, ellipsize=True)
+        self.b_artist = label("Play some music or a video and it shows up here.", xalign=0, ellipsize=True)
         self.b_album = label("", "dim", xalign=0, ellipsize=True)
         self.b_progress = css(Gtk.ProgressBar(), "progress")
         self.b_progress.set_margin_top(14)
@@ -903,7 +903,7 @@ class Panel(AutoHide):
         row = hbox(8)
         row.set_homogeneous(True)
         self.p_gauges = {}
-        for key, title in (("cpu", "Procesor"), ("ram", "Paměť"), ("temp", "Teplota"), ("disk", "Disk")):
+        for key, title in (("cpu", "CPU"), ("ram", "Memory"), ("temp", "Temperature"), ("disk", "Disk")):
             tile = vbox(4, "tile", "perf-tile")
             gauge = css(Gauge(84, "0%", 6), "big")
             name = label(f"{I[key]}  {title}", "perf-name")
@@ -917,7 +917,7 @@ class Panel(AutoHide):
 
         lower = hbox(8)
         chart = vbox(6, "tile")
-        chart.pack_start(label("Procesor za poslední 2 minuty", "dim", xalign=0), False, False, 0)
+        chart.pack_start(label("CPU over the last 2 minutes", "dim", xalign=0), False, False, 0)
         self.p_spark = Sparkline(84)
         chart.pack_start(self.p_spark, True, True, 0)
         lower.pack_start(chart, True, True, 0)
@@ -925,7 +925,7 @@ class Panel(AutoHide):
         procs = vbox(3, "tile", "procs")
         procs.set_size_request(280, -1)
         head = hbox(0)
-        head.pack_start(label("Nejvytíženější", "dim", xalign=0), True, True, 0)
+        head.pack_start(label("Top processes", "dim", xalign=0), True, True, 0)
         head.pack_start(css(label("CPU", "dim", xalign=1), "proc-col"), False, False, 0)
         head.pack_start(css(label("RAM", "dim", xalign=1), "proc-col"), False, False, 0)
         procs.pack_start(head, False, False, 0)
@@ -946,7 +946,7 @@ class Panel(AutoHide):
 
     def build_apps(self):
         page = vbox(8, "page")
-        self.search = css(Gtk.SearchEntry(placeholder_text="Hledat aplikaci"), "search")
+        self.search = css(Gtk.SearchEntry(placeholder_text="Search apps"), "search")
         self.search.connect("search-changed", lambda *_: (self.flow.invalidate_filter(), self.select_first_app()))
         self.search.connect("activate", lambda *_: self.launch_first())
         page.pack_start(self.search, False, False, 0)
@@ -1054,7 +1054,7 @@ class Panel(AutoHide):
         self.c_min.set_text(f"{now.minute:02d}")
         self.refresh_media()
         if self.tab == "dashboard":
-            up = f"{I['clock']}  běží {fmt_duration(self.stats.uptime())}"
+            up = f"{I['clock']}  up {fmt_duration(self.stats.uptime())}"
             bat = self.stats.battery()
             if bat:
                 icon = I["plug"] if bat[1] in ("Charging", "Full", "Not charging") else I["bat"][min(4, bat[0] // 20)]
@@ -1073,13 +1073,13 @@ class Panel(AutoHide):
         temp = self.stats.temp()
         gauge, detail = self.p_gauges["cpu"]
         gauge.set(self.stats.cpu, f"{self.stats.cpu:.0f}%")
-        detail.set_text(f"{os.cpu_count() or 1} vláken")
+        detail.set_text(f"{os.cpu_count() or 1} threads")
         gauge, detail = self.p_gauges["ram"]
         gauge.set(pct, f"{pct:.0f}%")
         detail.set_text(f"{used:.1f} / {total:.1f} GB")
         gauge, detail = self.p_gauges["temp"]
         gauge.set(temp or 0, f"{temp:.0f}°" if temp is not None else "—")
-        detail.set_text("čidlo procesoru" if temp is not None else "čidlo nenalezeno")
+        detail.set_text("CPU sensor" if temp is not None else "no sensor found")
         gauge, detail = self.p_gauges["disk"]
         gauge.set(dpct, f"{dpct:.0f}%")
         detail.set_text(f"{dused:.0f} / {dtotal:.0f} GB")
@@ -1096,24 +1096,24 @@ class Panel(AutoHide):
         for btn in (self.m_play, self.b_play):
             btn.set_label(I["pause"] if playing else I["play"])
         if not info:
-            self.m_title.set_text("Nic nehraje")
+            self.m_title.set_text("Nothing playing")
             self.m_artist.set_text("")
             self.m_art.set_url(None)
             self.b_player.hide()
-            self.b_title.set_text("Nic nehraje")
-            self.b_artist.set_text("Spusť hudbu nebo video a objeví se tady.")
+            self.b_title.set_text("Nothing playing")
+            self.b_artist.set_text("Play some music or a video and it shows up here.")
             self.b_album.set_text("")
             self.b_progress.set_fraction(0)
             self.b_pos.set_text("")
             self.b_len.set_text("")
             self.b_art.set_url(None)
             return
-        self.m_title.set_text(info["title"] or "Bez názvu")
+        self.m_title.set_text(info["title"] or "Untitled")
         self.m_artist.set_text(info["artist"])
         self.m_art.set_url(info["art"])
         self.b_player.set_text(info["player"])
         self.b_player.show()
-        self.b_title.set_text(info["title"] or "Bez názvu")
+        self.b_title.set_text(info["title"] or "Untitled")
         self.b_artist.set_text(info["artist"])
         self.b_album.set_text(info["album"])
         self.b_art.set_url(info["art"])
@@ -1150,7 +1150,7 @@ class Panel(AutoHide):
                 self.weather_at = time.monotonic() + 1800   # další dotaz za 30 minut
             else:
                 if self.w_temp.get_text() == "—":
-                    self.w_desc.set_text("nedostupné")
+                    self.w_desc.set_text("unavailable")
                 self.weather_at = time.monotonic() + 300    # nepovedlo se, zkusit za 5 minut
             return False
 
@@ -1298,7 +1298,7 @@ class Backlight:
             except (OSError, subprocess.SubprocessError):
                 pass
         else:
-            print("island-panel: jas se nepodařilo nastavit (logind odmítl a brightnessctl není nainstalovaný)",
+            print("island-panel: could not set brightness (logind refused and brightnessctl is not installed)",
                   file=sys.stderr)
 
     def _logind(self, raw):
@@ -1541,7 +1541,7 @@ def plain_text(text):
 def fmt_ago(timestamp):
     seconds = max(0, int(time.time() - timestamp))
     if seconds < 60:
-        return "teď"
+        return "now"
     if seconds < 3600:
         return f"{seconds // 60} min"
     if seconds < 86400:
@@ -1650,7 +1650,7 @@ class NotificationServer:
 
     def _on_lost(self, conn, _name):
         self.active = False
-        self.other = "jiný program"
+        self.other = "another program"
         if conn is not None:
             try:
                 pid = conn.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
@@ -1693,7 +1693,7 @@ class NotificationServer:
         else:
             self.items.remove(note)
             note.time = time.time()
-        note.app = params.get_child_value(0).get_string() or "Oznámení"
+        note.app = params.get_child_value(0).get_string() or "Notification"
         note.icon = params.get_child_value(2).get_string()
         note.summary = plain_text(params.get_child_value(3).get_string())
         note.body = plain_text(params.get_child_value(4).get_string())
@@ -1871,11 +1871,11 @@ class ControlCenter(AutoHide):
     """Oznámení, otevřená okna, rychlé přepínače a sloupec vypnout / odhlásit."""
 
     SESSION = [   # klíč, ikona, popis, chce potvrzení druhým kliknutím
-        ("lock", "lock", "Zamknout", False),
-        ("suspend", "moon", "Uspat", False),
-        ("logout", "signout", "Odhlásit", True),
-        ("reboot", "refresh", "Restartovat", True),
-        ("poweroff", "power", "Vypnout", True),
+        ("lock", "lock", "Lock", False),
+        ("suspend", "moon", "Suspend", False),
+        ("logout", "signout", "Log out", True),
+        ("reboot", "refresh", "Restart", True),
+        ("poweroff", "power", "Shut down", True),
     ]
 
     def __init__(self, app, server, icons):
@@ -1963,7 +1963,7 @@ class ControlCenter(AutoHide):
             self.armed = key
             button = self.session_buttons[key]
             set_class(button, "armed", True)
-            button.title_label.set_text("Opravdu?")
+            button.title_label.set_text("Sure?")
             self.armed_timer = GLib.timeout_add(3000, self.disarm)
             return
         self.disarm()
@@ -1987,9 +1987,9 @@ class ControlCenter(AutoHide):
     def build_notifications(self):
         section = vbox(8)
         head = hbox(8)
-        self.n_title = label("Oznámení", "section-title", xalign=0)
+        self.n_title = label("Notifications", "section-title", xalign=0)
         head.pack_start(self.n_title, True, True, 0)
-        self.n_clear = css(Gtk.Button(label=f"{I['trash']}  Smazat vše"), "flat", "chip-btn")
+        self.n_clear = css(Gtk.Button(label=f"{I['trash']}  Clear all"), "flat", "chip-btn")
         self.n_clear.connect("clicked", lambda *_: self.server.clear())
         head.pack_start(self.n_clear, False, False, 0)
         section.pack_start(head, False, False, 0)
@@ -2009,14 +2009,14 @@ class ControlCenter(AutoHide):
         for child in self.n_list.get_children():
             self.n_list.remove(child)
         count = len(self.server.items)
-        self.n_title.set_text(f"Oznámení ({count})" if count else "Oznámení")
+        self.n_title.set_text(f"Notifications ({count})" if count else "Notifications")
         self.n_clear.set_visible(count > 0)
         if not self.server.active:
-            text = (f"Oznámení teď obsluhuje program „{self.server.other}“,\nproto se tady nezobrazují."
-                    if self.server.other else "Služba oznámení se nespustila.")
+            text = (f"Notifications are handled by \"{self.server.other}\" right now,\nso they are not shown here."
+                    if self.server.other else "The notification service did not start.")
             self.n_list.pack_start(css(label(text, "dim", "empty"), "tile"), False, False, 0)
         elif not count:
-            self.n_list.pack_start(css(label("Žádná oznámení", "dim", "empty"), "tile"), False, False, 0)
+            self.n_list.pack_start(css(label("No notifications", "dim", "empty"), "tile"), False, False, 0)
         groups = {}
         for note in self.server.items:
             groups.setdefault(note.app, []).append(note)
@@ -2046,13 +2046,13 @@ class ControlCenter(AutoHide):
             line.connect("clicked", lambda _b, n=note: self.server.activate(n))
             group.pack_start(line, False, False, 0)
         if len(notes) > 4:
-            group.pack_start(label(f"a dalších {len(notes) - 4}", "dim", xalign=0), False, False, 0)
+            group.pack_start(label(f"and {len(notes) - 4} more", "dim", xalign=0), False, False, 0)
         return group
 
     # ------------------------------------------------------------ otevřená okna
     def build_windows(self):
         section = vbox(8)
-        self.w_title = label("Otevřená okna", "section-title", xalign=0)
+        self.w_title = label("Open windows", "section-title", xalign=0)
         section.pack_start(self.w_title, False, False, 0)
         scroll = css(Gtk.ScrolledWindow(), "tile", "window-list")
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -2079,7 +2079,7 @@ class ControlCenter(AutoHide):
             found.append({
                 "address": client.get("address", ""),
                 "class": client.get("class") or client.get("initialClass") or "",
-                "title": client.get("title") or client.get("class") or "Okno",
+                "title": client.get("title") or client.get("class") or "Window",
                 "workspace": workspace.get("id", 0),
                 "workspace_name": str(workspace.get("name", "")),
             })
@@ -2094,13 +2094,13 @@ class ControlCenter(AutoHide):
         for child in self.w_list.get_children():
             self.w_list.remove(child)
         if clients is None:
-            self.w_title.set_text("Otevřená okna")
-            self.w_list.pack_start(label("Seznam oken je dostupný jen v Hyprlandu", "dim", "empty"), False, False, 0)
+            self.w_title.set_text("Open windows")
+            self.w_list.pack_start(label("The window list needs Hyprland", "dim", "empty"), False, False, 0)
         elif not clients:
-            self.w_title.set_text("Otevřená okna")
-            self.w_list.pack_start(label("Žádná otevřená okna", "dim", "empty"), False, False, 0)
+            self.w_title.set_text("Open windows")
+            self.w_list.pack_start(label("No open windows", "dim", "empty"), False, False, 0)
         else:
-            self.w_title.set_text(f"Otevřená okna ({len(clients)})")
+            self.w_title.set_text(f"Open windows ({len(clients)})")
         for client in clients or []:
             row = hbox(2, "window-row")
             focus = css(Gtk.Button(), "flat", "window-btn")
@@ -2108,7 +2108,7 @@ class ControlCenter(AutoHide):
             inner.pack_start(self.icons.image(client["class"], 26), False, False, 0)
             text = vbox(0)
             text.pack_start(label(client["title"], xalign=0, ellipsize=True), False, False, 0)
-            place = f"plocha {client['workspace_name'] or client['workspace']}"
+            place = f"workspace {client['workspace_name'] or client['workspace']}"
             text.pack_start(label(f"{client['class']} · {place}", "dim", "small", xalign=0, ellipsize=True),
                             False, False, 0)
             inner.pack_start(text, True, True, 0)
@@ -2135,7 +2135,7 @@ class ControlCenter(AutoHide):
     # ------------------------------------------------------------ rychlé přepínače
     def build_toggles(self):
         section = vbox(8)
-        section.pack_start(label("Rychlé přepínače", "section-title", xalign=0), False, False, 0)
+        section.pack_start(label("Quick toggles", "section-title", xalign=0), False, False, 0)
         row = hbox(8)
         row.set_homogeneous(True)
         nmcli, btctl, wpctl = shutil.which("nmcli"), shutil.which("bluetoothctl"), shutil.which("wpctl")
@@ -2148,13 +2148,13 @@ class ControlCenter(AutoHide):
             ("bluetooth", "bt", "bt", "Bluetooth", bool(btctl),
              lambda: "Powered: yes" in run(btctl, "show"),
              lambda on: run(btctl, "power", "on" if on else "off", timeout=8)),
-            ("mic", "mic", "mic_off", "Mikrofon", bool(wpctl),
+            ("mic", "mic", "mic_off", "Mic", bool(wpctl),
              lambda: bool(run(wpctl, "get-volume", mic)) and "MUTED" not in run(wpctl, "get-volume", mic),
              lambda on: run(wpctl, "set-mute", mic, "0" if on else "1")),
-            ("dnd", "bell_off", "bell", "Nerušit", True,
+            ("dnd", "bell_off", "bell", "Silent", True,
              lambda: self.server.dnd,
              self.set_dnd),
-            ("awake", "coffee", "coffee", "Neusínat", bool(inhibit),
+            ("awake", "coffee", "coffee", "Awake", bool(inhibit),
              lambda: self.inhibit is not None and self.inhibit.poll() is None,
              lambda on: self.set_awake(on, inhibit)),
         ]
@@ -2182,7 +2182,7 @@ class ControlCenter(AutoHide):
         if on and (self.inhibit is None or self.inhibit.poll() is not None):
             try:
                 self.inhibit = subprocess.Popen(
-                    [program, "--what=idle:sleep", "--who=Island panel", "--why=Zapnuto Neusínat", "sleep", "infinity"],
+                    [program, "--what=idle:sleep", "--who=Island panel", "--why=Awake is on", "sleep", "infinity"],
                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except OSError:
                 self.inhibit = None
@@ -2230,7 +2230,7 @@ class ControlCenter(AutoHide):
             try:
                 entry[6](target)
             except Exception as err:
-                print(f"island-panel: přepínač {key}: {err}", file=sys.stderr)
+                print(f"island-panel: toggle {key}: {err}", file=sys.stderr)
             GLib.idle_add(lambda: self.refresh_toggles() and False)
 
         if key in ("dnd", "awake"):
@@ -2677,7 +2677,7 @@ class Wallpapers:
                 surfaces = self.thumbnail(item, scale if keep else 0, big)
             except Exception as err:   # poškozený nebo nečitelný soubor
                 ok = False
-                print(f"island-panel: náhled {item.path}: {err}", file=sys.stderr)
+                print(f"island-panel: thumbnail {item.path}: {err}", file=sys.stderr)
                 with self.cond:
                     self.index[item.key] = {"failed": True}
                     self.dirty = True
@@ -2780,7 +2780,7 @@ class Wallpapers:
                 pass
             if os.path.exists(out) and os.path.getsize(out) > 0:
                 return out
-        raise RuntimeError("z videa se nepodařilo získat snímek")
+        raise RuntimeError("could not grab a frame from the video")
 
     def save_index(self):
         """Uloží poznámky k náhledům a smaže náhledy tapet, které už neexistují (volá se se zámkem)."""
@@ -2973,8 +2973,8 @@ class WallpaperPicker:
         caption.pack_start(self.info_label, False, False, 0)
         caption.set_no_show_all(not WALL_CAPTION)
         root.pack_start(caption, False, False, 0)
-        hint = label("← →  vybrat      Enter  nastavit      Mezerník  náhled"
-                     "      písmena  hledat      Esc  zavřít", "wall-hint")
+        hint = label("← →  select      Enter  apply      Space  preview"
+                     "      type  search      Esc  close", "wall-hint")
         hint.set_halign(Gtk.Align.CENTER)
         hint.set_no_show_all(not WALL_HINT)
         root.pack_start(hint, False, False, 0)
@@ -3080,7 +3080,7 @@ class WallpaperPicker:
         if item.folder:
             parts.append(item.folder)
         if item.path == self.current:
-            parts.append("nastavená")
+            parts.append("current")
         self.name_label.set_text(item.name)
         self.info_label.set_text("   ·   ".join(parts))
 
@@ -3209,9 +3209,9 @@ class WallpaperPicker:
 
     def draw_message(self, cr, width, height):
         if self.store.items:
-            text = "Filtru neodpovídá žádná tapeta"
+            text = "No wallpaper matches the filter"
         else:
-            text = "Ve složce " + ", ".join(WALLPAPER_DIRS) + " nejsou žádné obrázky"
+            text = "No pictures in " + ", ".join(WALLPAPER_DIRS)
         layout = self.text_layout(text, 14, bold=False)
         tw, th = layout.get_pixel_size()
         x, y, w, h = (width - tw) / 2 - 22, (height - th) / 2 - 14, tw + 44, th + 28
@@ -3639,11 +3639,11 @@ class ConnPage:
     # --- kreslení seznamu ---
     def render(self):
         if self.power is None:
-            note = self.missing_text if self.loaded_once else "Načítám…"
+            note = self.missing_text if self.loaded_once else "Loading…"
         elif not self.power:
             note = self.off_text
         elif not self.items:
-            note = "Hledám…" if self.scanning() else self.empty_text
+            note = "Searching…" if self.scanning() else self.empty_text
         else:
             note = ""
         self.owner.page_changed(self)
@@ -3714,7 +3714,7 @@ class ConnPage:
             line = hbox(6)
             entry = self.entry = Gtk.Entry()
             css(entry, "net-entry")
-            entry.set_placeholder_text("Heslo")
+            entry.set_placeholder_text("Password")
             entry.set_visibility(self.reveal)
             entry.set_input_purpose(Gtk.InputPurpose.PASSWORD)
             entry.set_text(self.secret)
@@ -3728,7 +3728,7 @@ class ConnPage:
             box.pack_start(line, False, False, 0)
         line = hbox(6)
         for text, primary, work in self.actions(item):
-            btn = Connections.button(label("Pracuji…" if working and primary else text), "flat", "net-btn")
+            btn = Connections.button(label("Working…" if working and primary else text), "flat", "net-btn")
             set_class(btn, "primary", primary)
             btn.set_sensitive(not working)
             btn.connect("clicked", lambda _b, w=work: self.act(item, w))
@@ -3785,10 +3785,10 @@ class ConnPage:
 
 class WifiPage(ConnPage):
     key, title = "wifi", "Wi-Fi"
-    manager, manager_label = "nm-connection-editor", "Upravit uložené sítě…"
-    off_text = "Wi-Fi je vypnuté."
-    missing_text = "Správce sítě (NetworkManager) neodpovídá."
-    empty_text = "Žádné sítě v dosahu."
+    manager, manager_label = "nm-connection-editor", "Edit saved networks…"
+    off_text = "Wi-Fi is off."
+    missing_text = "NetworkManager is not responding."
+    empty_text = "No networks in range."
 
     def __init__(self, owner):
         self.nmcli = shutil.which("nmcli") or "nmcli"
@@ -3839,11 +3839,11 @@ class WifiPage(ConnPage):
 
     def describe(self, item):
         if item["active"]:
-            subtitle = "Připojeno"
+            subtitle = "Connected"
         elif item["uuid"]:
-            subtitle = "Uložená"
+            subtitle = "Saved"
         elif not item["secure"]:
-            subtitle = "Otevřená síť"
+            subtitle = "Open network"
         else:
             subtitle = ""
         right = []
@@ -3858,29 +3858,29 @@ class WifiPage(ConnPage):
 
     def hint(self, item):
         if item["enterprise"] and not item["uuid"]:
-            return "Podniková síť se jménem a heslem. Nastav ji přes „Upravit uložené sítě“."
+            return "Enterprise network with a username and password. Set it up in \"Edit saved networks\"."
         return ""
 
     def actions(self, item):
         if item["active"]:
-            found = [("Odpojit", True, self.disconnect)]
+            found = [("Disconnect", True, self.disconnect)]
         elif item["enterprise"] and not item["uuid"]:
             found = []
         else:
-            found = [("Připojit", True, lambda: self.connect(item))]
+            found = [("Connect", True, lambda: self.connect(item))]
         if item["uuid"]:
-            found.append(("Zapomenout", False, lambda: self.forget(item)))
+            found.append(("Forget", False, lambda: self.forget(item)))
         return found
 
     def connect(self, item):
         if item["uuid"]:
             ok, out, err = tool(self.nmcli, "-w", "30", "connection", "up", "uuid", item["uuid"], timeout=40)
             if not ok and "ecrets" in out + err:
-                return "Uložené heslo nesedí. Dej Zapomenout a připoj se znovu."
+                return "The saved password no longer works. Forget the network and connect again."
         else:
             secret = self.secret
             if item["secure"] and len(secret) < 8:
-                return "Heslo musí mít aspoň 8 znaků."
+                return "The password needs at least 8 characters."
             cmd = [self.nmcli, "-w", "30", "device", "wifi", "connect", item["name"]]
             ok, out, err = tool(*cmd, *(["password", secret] if item["secure"] else []), timeout=40)
             if not ok:      # nepovedený pokus po sobě nechává uložený profil se špatným heslem
@@ -3891,18 +3891,18 @@ class WifiPage(ConnPage):
             return None
         text = (err or out).strip()
         if "ecrets" in text or "psk" in text:
-            return "Špatné heslo."
+            return "Wrong password."
         if "No network with SSID" in text:
-            return "Síť už není v dosahu."
+            return "The network is out of range."
         if text == "timeout" or "imeout" in text:
-            return "Připojení trvalo moc dlouho."
-        return (text.splitlines() or ["Připojení se nepovedlo."])[-1].removeprefix("Error: ")
+            return "Connecting took too long."
+        return (text.splitlines() or ["Could not connect."])[-1].removeprefix("Error: ")
 
     def disconnect(self):
         _ok, out, _err = tool(self.nmcli, "-t", "-f", "DEVICE,TYPE", "device", "status")
         device = next((f[0] for f in map(split_terse, out.splitlines()) if len(f) >= 2 and f[1] == "wifi"), None)
         if device is None:
-            return "Nenašel jsem Wi-Fi zařízení."
+            return "No Wi-Fi device found."
         ok, out, err = tool(self.nmcli, "device", "disconnect", device)
         return None if ok else (err or out).strip().removeprefix("Error: ")
 
@@ -3913,10 +3913,10 @@ class WifiPage(ConnPage):
 
 class BluetoothPage(ConnPage):
     key, title = "bluetooth", "Bluetooth"
-    manager, manager_label = "blueman-manager", "Správce Bluetooth…"
-    off_text = "Bluetooth je vypnutý."
-    missing_text = "Bluetooth adaptér nenalezen."
-    empty_text = "Žádná zařízení. Zkus hledání tlačítkem nahoře."
+    manager, manager_label = "blueman-manager", "Bluetooth manager…"
+    off_text = "Bluetooth is off."
+    missing_text = "No Bluetooth adapter found."
+    empty_text = "No devices. Search with the button above."
     ICONS = (("headset", "headphones"), ("headphone", "headphones"), ("audio", "vol_high"), ("phone", "mobile"),
              ("keyboard", "keyboard"), ("mouse", "mouse"), ("gaming", "gamepad"), ("computer", "laptop"),
              ("video", "tv"))
@@ -3985,26 +3985,26 @@ class BluetoothPage(ConnPage):
         icon = next((I[name] for part, name in self.ICONS if part in item["kind"]), I["bt"])
         parts = []
         if item["active"]:
-            parts.append("Připojeno")
+            parts.append("Connected")
         elif item["paired"]:
-            parts.append("Spárováno")
+            parts.append("Paired")
         else:
-            parts.append("Nové zařízení")
+            parts.append("New device")
         if item["battery"] is not None:
-            parts.append(f"baterie {item['battery']} %")
+            parts.append(f"battery {item['battery']}%")
         right = [label(I["check"], "net-check")] if item["active"] else []
         return icon, "  ·  ".join(parts), right
 
     def actions(self, item):
         mac = item["key"]
         if item["active"]:
-            found = [("Odpojit", True, lambda: self.command("disconnect", mac, "Successful disconnected"))]
+            found = [("Disconnect", True, lambda: self.command("disconnect", mac, "Successful disconnected"))]
         elif item["paired"]:
-            found = [("Připojit", True, lambda: self.command("connect", mac, "Connection successful", 25))]
+            found = [("Connect", True, lambda: self.command("connect", mac, "Connection successful", 25))]
         else:
-            found = [("Spárovat a připojit", True, lambda: self.pair(mac))]
+            found = [("Pair and connect", True, lambda: self.pair(mac))]
         if item["paired"]:
-            found.append(("Odebrat", False, lambda: self.command("remove", mac, "Device has been removed")))
+            found.append(("Remove", False, lambda: self.command("remove", mac, "Device has been removed")))
         return found
 
     def command(self, verb, mac, success, timeout=12):
@@ -4014,21 +4014,21 @@ class BluetoothPage(ConnPage):
         if success in text:
             return None
         if err == "timeout" or "timeout" in text.lower():
-            return "Zařízení neodpovídá. Je zapnuté a v dosahu?"
+            return "The device is not responding. Is it on and in range?"
         if "not available" in text:
-            return "Zařízení není v dosahu."
+            return "The device is out of range."
         failed = re.search(r"Failed to \w+: (\S+)(?: (\S+))?", text)
         if failed:
-            return "Nepovedlo se (" + (failed.group(2) or failed.group(1).rsplit(".", 1)[-1]) + ")."
-        return None if ok and verb != "connect" else "Nepovedlo se."
+            return "Failed (" + (failed.group(2) or failed.group(1).rsplit(".", 1)[-1]) + ")."
+        return None if ok and verb != "connect" else "Failed."
 
     def pair(self, mac):
         ok, out, err = tool(self.btctl, "pair", mac, timeout=35)
         text = out + err
         if "Pairing successful" not in text and "AlreadyExists" not in text:
             if "AuthenticationFailed" in text or "AuthenticationCanceled" in text or "passkey" in text.lower():
-                return "Zařízení chce potvrdit kód. Spáruj ho ve Správci Bluetooth."
-            return "Párování se nepovedlo. Je zařízení v párovacím režimu?"
+                return "The device wants a confirmation code. Pair it in the Bluetooth manager."
+            return "Pairing failed. Is the device in pairing mode?"
         tool(self.btctl, "trust", mac)
         return self.command("connect", mac, "Connection successful", 25)
 
@@ -4257,7 +4257,7 @@ class App(Gtk.Application):
         try:
             self.provider.load_from_file(style)
         except GLib.Error as err:
-            print(f"island-panel: chyba ve style.css: {err.message}", file=sys.stderr)
+            print(f"island-panel: error in style.css: {err.message}", file=sys.stderr)
 
     def do_command_line(self, command_line):
         args = command_line.get_arguments()[1:]
