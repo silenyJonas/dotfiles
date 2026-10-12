@@ -10,7 +10,7 @@ configuration {
 @import "~/.config/rofi/colors/island.rasi"
 
 * {
-    font: "JetBrainsMono Nerd Font 10";
+    font: "Nunito SemiBold 11";
 }
 
 /*

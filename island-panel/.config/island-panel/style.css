@@ -17,8 +17,10 @@
 
 /* === Základ === */
 * {
-  font-family: "JetbrainsMono Nerd Font";
-  font-size: 13px;
+  /* písmo textů; ikony se berou z Nerd Fontu za čárkou */
+  font-family: "Nunito", "JetbrainsMono Nerd Font";
+  font-size: 14px;
+  font-feature-settings: "tnum";   /* číslice stejně široké, čísla při změně neposkakují */
   outline: none;
 }
 
@@ -333,6 +335,26 @@ flowboxchild:selected {
   font-size: 12px;
 }
 
+/* --- rychlé aplikace nad seznamem --- */
+.quick-apps {
+  padding: 10px 12px;
+}
+
+button.quick-app {
+  padding: 8px 6px;
+  border-radius: 12px;
+  min-width: 92px;
+  transition: background 120ms ease;
+}
+
+button.quick-app:hover {
+  background: @hover;
+}
+
+.app.favourite .app-name {
+  color: @accent;
+}
+
 scrollbar {
   background: transparent;
   border: none;
@@ -351,42 +373,12 @@ scrollbar slider {
   border: 1px solid @island_border;
   border-radius: 16px;
   margin: 4px 6px 4px 14px;
-  padding: 12px 9px;
+  padding: 9px;
   color: @fg;
-}
-
-.side-value {
-  font-weight: bold;
 }
 
 .vslider {
   color: @fg;
-}
-
-button.side-btn {
-  padding: 6px 0;
-  border-radius: 11px;
-  background: @hover;
-  transition: background 150ms ease;
-}
-
-button.side-btn:hover {
-  background: alpha(@fg, 0.2);
-}
-
-button.side-btn.muted label {
-  color: @bad;
-}
-
-.side-icon {
-  padding: 6px 0;
-  color: @fg_dim;
-}
-
-.side-sep {
-  min-height: 1px;
-  background: alpha(@fg, 0.08);
-  margin: 4px 2px;
 }
 
 /* === Ovládací centrum u pravého okraje === */
@@ -427,12 +419,13 @@ button.side-btn.muted label {
   background: @island;
   border: 1px solid @island_border;
   border-radius: 16px;
-  padding: 8px;
+  padding: 6px;
 }
 
 button.session-btn {
-  padding: 10px 4px 8px 4px;
-  min-width: 66px;
+  padding: 0;
+  min-width: 42px;
+  min-height: 42px;
   border-radius: 12px;
   background: @tile;
   transition: background 150ms ease;
@@ -443,12 +436,7 @@ button.session-btn:hover {
 }
 
 .session-icon {
-  font-size: 18px;
-}
-
-.session-label {
-  font-size: 10px;
-  color: @fg_dim;
+  font-size: 16px;
 }
 
 button.session-btn.armed {

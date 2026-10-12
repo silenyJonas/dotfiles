@@ -42,6 +42,7 @@ import math
 import os
 import random
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -74,7 +75,7 @@ CLOSE_DELAY_MS = 350     # za jak dlouho po odjetí kurzoru se panel schová
 SIDE_ENABLED = True      # boční panel s hlasitostí a jasem u pravého okraje
 SIDE_TRIGGER_HEIGHT = 320  # výška citlivého pruhu u pravého okraje (je uprostřed výšky)
 SIDE_TRIGGER_WIDTH = 3     # šířka citlivého pruhu
-SLIDER_HEIGHT = 130      # výška posuvníků v bočním panelu
+SLIDER_HEIGHT = 150      # výška posuvníků v bočním panelu
 SIDE_OPEN_DELAY_MS = 300   # po jak dlouhé době na pravém okraji vyjede hlasitost a jas
 
 CENTER_ENABLED = True      # ovládací centrum u pravého okraje
@@ -91,6 +92,15 @@ TOAST_TOP_MARGIN = 50      # odsazení bublin od horního okraje (pod lištou)
 # až na pravý okraj má souřadnici přesně rovnou šířce okna a GTK by ho pak bralo jako
 # "mimo okno", takže by panel nevyjel. S přesahem je kurzor vždy uvnitř.
 EDGE_OVERHANG = 2
+
+# Rychlé aplikace nahoře v záložce Apps. Pravým kliknutím na aplikaci v seznamu se přidá nebo odebere,
+# výběr se uloží do souboru quick-apps vedle panel.py. Tohle je jen výchozí výběr: z každé dvojice
+# se vezme první nainstalovaná verze (např. Brave z RPM, jinak z Flatpaku).
+QUICK_APPS = ["brave-browser|com.brave.Browser", "com.spotify.Client", "codium|com.vscodium.codium",
+              "dev.vencord.Vesktop"]
+# Aplikace, které se mají spouštět vlastním příkazem místo toho z jejich .desktop souboru
+APP_COMMANDS = {"codium": "codium --ozone-platform=wayland"}
+QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
 
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
 NET_WIDTH = 340              # šířka okna
@@ -136,7 +146,7 @@ I = {
     "wifi": "\uf1eb", "bt": "\uf293", "mic": "\uf130", "mic_off": "\uf131",
     "bell": "\uf0f3", "bell_off": "\uf1f6", "coffee": "\uf0f4", "times": "\uf00d", "trash": "\uf1f8",
     "image": "\uf03e", "film": "\uf008", "shuffle": "\uf074", "folder": "\uf07c", "check": "\uf00c",
-    "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
+    "star": "\uf005", "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
     "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
@@ -662,6 +672,19 @@ class Calendar(Gtk.Box):
 # ----------------------------------------------------------------------------
 # Panel
 # ----------------------------------------------------------------------------
+def app_key(app):
+    """Jméno .desktop souboru aplikace bez přípony (např. 'codium')."""
+    key = app.get_id() or ""
+    return key[:-8] if key.endswith(".desktop") else key
+
+
+def app_by_key(key):
+    try:
+        return Gio.DesktopAppInfo.new(key + ".desktop")
+    except TypeError:          # neexistuje
+        return None
+
+
 def layer_window(app, namespace, edge=GtkLayerShell.Edge.TOP, overhang=0):
     win = Gtk.Window(application=app)
     win.set_decorated(False)
@@ -946,8 +969,14 @@ class Panel(AutoHide):
 
     def build_apps(self):
         page = vbox(8, "page")
+        self.quick = vbox(6, "tile", "quick-apps")
+        self.quick.pack_start(label("Quick apps", "section-title", xalign=0), False, False, 0)
+        self.quick_row = hbox(4)
+        self.quick.pack_start(self.quick_row, False, False, 0)
+        page.pack_start(self.quick, False, False, 0)
         self.search = css(Gtk.SearchEntry(placeholder_text="Search apps"), "search")
-        self.search.connect("search-changed", lambda *_: (self.flow.invalidate_filter(), self.select_first_app()))
+        self.search.connect("search-changed", lambda *_: (self.flow.invalidate_filter(), self.select_first_app(),
+                                                         self.quick.set_visible(not self.search.get_text())))
         self.search.connect("activate", lambda *_: self.launch_first())
         page.pack_start(self.search, False, False, 0)
         scroll = css(Gtk.ScrolledWindow(), "tile", "apps-scroll")
@@ -958,6 +987,7 @@ class Panel(AutoHide):
         self.flow.set_valign(Gtk.Align.START)
         self.flow.set_filter_func(self.app_filter)
         self.flow.connect("child-activated", lambda _f, child: self.launch(child.app))
+        self.flow.connect("button-press-event", self.on_app_press)     # pravé tlačítko = do rychlých aplikací
         scroll.add(self.flow)
         page.pack_start(scroll, True, True, 0)
         Gio.AppInfoMonitor.get().connect("changed", lambda *_: setattr(self, "apps_built", False))
@@ -972,8 +1002,11 @@ class Panel(AutoHide):
             self.flow.remove(child)
         apps = [a for a in Gio.AppInfo.get_all() if a.should_show()]
         apps.sort(key=lambda a: (a.get_display_name() or "").lower())
+        favourites = set(self.quick_ids())
         for app in apps:
             item = vbox(4, "app")
+            if app_key(app) in favourites:
+                set_class(item, "favourite", True)
             icon = app.get_icon()
             image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.DND) if icon else \
                 Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DND)
@@ -987,6 +1020,74 @@ class Panel(AutoHide):
             child.add(item)
             self.flow.add(child)
         self.flow.show_all()
+        self.build_quick()
+
+    # ------------------------------------------------------------ rychlé aplikace
+    QUICK_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "quick-apps")
+
+    def quick_ids(self):
+        """Oblíbené aplikace (jména .desktop souborů bez přípony), jen ty nainstalované."""
+        saved = read(self.QUICK_FILE, None)
+        wanted = saved.split() if saved is not None else QUICK_APPS
+        found, names = [], set()
+        for choice in wanted:
+            for key in choice.split("|"):       # z alternativ první nainstalovaná
+                app = app_by_key(key)
+                if app is None:
+                    continue
+                name = (app.get_display_name() or key).casefold()
+                if key not in found and name not in names:   # stejná aplikace dvakrát (RPM i Flatpak) jen jednou
+                    found.append(key)
+                    names.add(name)
+                break
+        return found
+
+    def save_quick(self, keys):
+        try:
+            with open(self.QUICK_FILE, "w", encoding="utf-8") as f:
+                f.write("\n".join(keys) + "\n")
+        except OSError as err:
+            print(f"island-panel: {self.QUICK_FILE}: {err}", file=sys.stderr)
+
+    def toggle_quick(self, app):
+        keys, key = self.quick_ids(), app_key(app)
+        keys = [k for k in keys if k != key] if key in keys else keys + [key]
+        self.save_quick(keys)
+        self.apps_built = False
+        self.ensure_apps()
+
+    def build_quick(self):
+        for child in self.quick_row.get_children():
+            self.quick_row.remove(child)
+        keys = self.quick_ids()
+        for key in keys[:QUICK_APPS_MAX]:
+            app = app_by_key(key)
+            item = vbox(4)
+            icon = app.get_icon()
+            image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.DND) if icon else \
+                Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DND)
+            image.set_pixel_size(36)
+            item.pack_start(image, False, False, 0)
+            item.pack_start(label(app.get_display_name() or key, "app-name", ellipsize=True), False, False, 0)
+            button = css(Gtk.Button(), "flat", "quick-app")
+            button.add(item)
+            button.set_can_focus(False)
+            button.connect("clicked", lambda _b, a=app: self.launch(a))
+            button.connect("button-press-event", lambda _b, ev, a=app: ev.button == 3 and (self.toggle_quick(a) or True))
+            self.quick_row.pack_start(button, False, False, 0)
+        if not keys:
+            self.quick_row.pack_start(label("Right-click an app below to add it here.", "dim", "small", xalign=0),
+                                      True, True, 0)
+        self.quick_row.show_all()
+        self.quick.set_visible(not self.search.get_text())
+
+    def on_app_press(self, flow, event):
+        if event.button != 3:
+            return False
+        child = flow.get_child_at_pos(int(event.x), int(event.y))
+        if child is not None:
+            self.toggle_quick(child.app)
+        return True
 
     def app_filter(self, child):
         words = self.search.get_text().lower().split()
@@ -1011,10 +1112,14 @@ class Panel(AutoHide):
             self.launch(child.app)
 
     def launch(self, app):
-        try:
-            app.launch([], None)
-        except GLib.Error as err:
-            print(f"island-panel: {err.message}", file=sys.stderr)
+        command = APP_COMMANDS.get(app_key(app))
+        if command:
+            spawn(*shlex.split(os.path.expanduser(command)))
+        else:
+            try:
+                app.launch([], None)
+            except GLib.Error as err:
+                print(f"island-panel: {err.message}", file=sys.stderr)
         self.hide()
 
     # ------------------------------------------------------------ záložky
@@ -1316,11 +1421,14 @@ class Backlight:
 
 
 class VSlider(Gtk.DrawingArea):
-    """Svislý posuvník 0-1: tažení myší nebo kolečko."""
+    """Svislý posuvník 0-1 ve tvaru kapsle: výplň zdola a nahoře na ní kolečko s ikonou.
+    Táhnout se dá kdekoli, kolečko myši posouvá, klik na kolečko zavolá on_knob (např. ztlumit)."""
 
-    def __init__(self, on_change, width=38, height=130):
+    def __init__(self, on_change, icon, on_knob=None, width=40, height=150):
         super().__init__()
-        self.value, self.dim, self.dragging, self.on_change = 0.0, False, False, on_change
+        self.value, self.dim, self.on_change, self.on_knob = 0.0, False, on_change, on_knob
+        self.icon = icon                  # funkce, která vrátí ikonu pro kolečko podle stavu
+        self.dragging, self.knob_press = False, None
         self.set_size_request(width, height)
         self.set_halign(Gtk.Align.CENTER)
         css(self, "vslider")
@@ -1345,24 +1453,39 @@ class VSlider(Gtk.DrawingArea):
         self.queue_draw()
         self.on_change(self.value)
 
+    def _geometry(self):
+        width, height = self.get_allocated_width(), self.get_allocated_height()
+        radius = width / 2
+        knob_y = height - radius - self.value * (height - 2 * radius)   # střed kolečka
+        return width, height, radius, knob_y
+
     def _from_y(self, y):
-        # pár pixelů rezervy nahoře i dole, aby šlo snadno trefit 0 % a 100 %
-        height = self.get_allocated_height()
-        return (height - 6 - y) / max(1, height - 12)
+        _width, height, radius, _knob = self._geometry()
+        return (height - radius - y) / max(1, height - 2 * radius)
 
     def on_press(self, _w, event):
-        if event.button == 1:
+        if event.button != 1:
+            return True
+        _width, _height, radius, knob_y = self._geometry()
+        if self.on_knob is not None and abs(event.y - knob_y) <= radius:
+            self.knob_press = event.y     # možná jen klik na kolečko; tažením se z toho stane posun
+        else:
             self.dragging = True
             self._change(self._from_y(event.y))
         return True
 
     def on_motion(self, _w, event):
+        if self.knob_press is not None and abs(event.y - self.knob_press) > 4:
+            self.knob_press, self.dragging = None, True
         if self.dragging:
             self._change(self._from_y(event.y))
         return True
 
     def on_release(self, _w, event):
         if event.button == 1:
+            if self.knob_press is not None:
+                self.knob_press = None
+                self.on_knob()
             self.dragging = False
         return True
 
@@ -1378,27 +1501,58 @@ class VSlider(Gtk.DrawingArea):
         return True
 
     def on_draw(self, _widget, cr):
-        w, h = self.get_allocated_width(), self.get_allocated_height()
+        width, height, radius, knob_y = self._geometry()
         ctx = self.get_style_context()
         fg = ctx.get_color(Gtk.StateFlags.NORMAL)
-        found, fill = ctx.lookup_color("pill")
-        if not found:
-            fill = fg
-        r = min(12, w / 2)
+        colors = {}
+        for name in ("pill", "pill_fg"):
+            found, rgba = ctx.lookup_color(name)
+            colors[name] = rgba if found else fg
+        # kapsle
         cr.new_sub_path()
-        cr.arc(w - r, r, r, -math.pi / 2, 0)
-        cr.arc(w - r, h - r, r, 0, math.pi / 2)
-        cr.arc(r, h - r, r, math.pi / 2, math.pi)
-        cr.arc(r, r, r, math.pi, 3 * math.pi / 2)
+        cr.arc(radius, radius, radius, math.pi, 2 * math.pi)
+        cr.arc(radius, height - radius, radius, 0, math.pi)
         cr.close_path()
         cr.clip()
         cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.10)
         cr.paint()
-        filled = h * self.value
-        if filled > 0.5:
-            cr.set_source_rgba(fill.red, fill.green, fill.blue, 0.35 if self.dim else 1.0)
-            cr.rectangle(0, h - filled, w, filled)
-            cr.fill()
+        # výplň od spodu ke středu kolečka
+        pill = colors["pill"]
+        cr.set_source_rgba(pill.red, pill.green, pill.blue, 0.45 if self.dim else 0.85)
+        cr.rectangle(0, knob_y, width, height - knob_y)
+        cr.fill()
+        # hodnota 0-100 na té straně kapsle, kde zrovna není kolečko
+        number = self.create_pango_layout(str(round(self.value * 100)))
+        font = self.get_pango_context().get_font_description().copy()
+        font.set_absolute_size(11 * Pango.SCALE)
+        font.set_weight(Pango.Weight.BOLD)
+        number.set_font_description(font)
+        nw, nh = number.get_pixel_size()
+        if knob_y < height / 2:      # kolečko nahoře -> číslo dole ve výplni (tmavé)
+            cr.move_to(radius - nw / 2, height - radius - nh / 2)
+            dark = colors["pill_fg"]
+            cr.set_source_rgba(dark.red, dark.green, dark.blue, 0.75)
+        else:                        # kolečko dole -> číslo nahoře v prázdné části (světlé)
+            cr.move_to(radius - nw / 2, radius - nh / 2)
+            cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.75)
+        PangoCairo.show_layout(cr, number)
+        # kolečko s ikonou, široké jako celý posuvník
+        cr.new_path()
+        cr.arc(radius, knob_y, radius - 1, 0, 2 * math.pi)
+        cr.set_source_rgba(pill.red, pill.green, pill.blue, 1.0)
+        cr.fill_preserve()
+        dark = colors["pill_fg"]
+        cr.set_source_rgba(dark.red, dark.green, dark.blue, 0.18)
+        cr.set_line_width(1)
+        cr.stroke()
+        layout = self.create_pango_layout(self.icon())
+        font = self.get_pango_context().get_font_description().copy()
+        font.set_absolute_size(radius * 0.72 * Pango.SCALE)
+        layout.set_font_description(font)
+        tw, th = layout.get_pixel_size()
+        cr.move_to(radius - tw / 2, knob_y - th / 2)
+        cr.set_source_rgba(dark.red, dark.green, dark.blue, 0.5 if self.dim else 1.0)
+        PangoCairo.show_layout(cr, layout)
         return False
 
 
@@ -1409,56 +1563,45 @@ class SidePanel(AutoHide):
         self.audio, self.backlight = Audio(), Backlight()
         self.visible, self.close_timer, self.poll_timer = False, None, None
         self.pending, self.apply_timer = {}, None
+        self.muted = False
 
         self.win = layer_window(app, "island-side", GtkLayerShell.Edge.RIGHT, EDGE_OVERHANG)
         self.watch_pointer()
-        root = vbox(8)
+        root = vbox(10)
         root.set_name("side")
         root.set_margin_end(EDGE_OVERHANG)   # vyrovná přesah okna, panel zůstane na stejném místě
         self.win.add(root)
 
-        self.v_value = label("", "side-value")
-        self.v_slider = VSlider(self.set_volume, height=SLIDER_HEIGHT)
-        self.v_button = css(Gtk.Button(label=I["vol_high"]), "flat", "side-btn")
-        self.v_button.connect("clicked", lambda *_: self.toggle_mute())
-        for widget in (self.v_value, self.v_slider, self.v_button):
-            root.pack_start(widget, False, False, 0)
-
-        self.b_value = self.b_slider = None
+        # hlasitost: klik na kolečko ztlumí / zruší ztlumení
+        self.v_slider = VSlider(self.set_volume, self.volume_icon, on_knob=self.toggle_mute, height=SLIDER_HEIGHT)
+        root.pack_start(self.v_slider, False, False, 0)
+        self.b_slider = None
         if self.backlight.available:
-            root.pack_start(css(Gtk.Box(), "side-sep"), False, False, 0)
-            self.b_value = label("", "side-value")
-            self.b_slider = VSlider(self.set_brightness, height=SLIDER_HEIGHT)
-            for widget in (self.b_value, self.b_slider, label(I["sun"], "side-icon")):
-                root.pack_start(widget, False, False, 0)
+            self.b_slider = VSlider(self.set_brightness, lambda: I["sun"], height=SLIDER_HEIGHT)
+            root.pack_start(self.b_slider, False, False, 0)
         root.show_all()
+
+    def volume_icon(self):
+        value = self.v_slider.value
+        return I["vol_off"] if self.muted or value <= 0.005 else I["vol_low"] if value < 0.5 else I["vol_high"]
 
     # ------------------------------------------------------------ hodnoty
     def refresh(self):
         vol = self.audio.get()
         if vol is not None and not self.v_slider.dragging:
-            value, muted = vol
-            self.v_slider.set(value, dim=muted)
-            self.show_volume(value, muted)
+            value, self.muted = vol
+            self.v_slider.set(value, dim=self.muted)
         if self.b_slider is not None and not self.b_slider.dragging:
             value = self.backlight.get()
             if value is not None:
                 self.b_slider.set(value)
-                self.b_value.set_text(f"{round(value * 100)}")
-
-    def show_volume(self, value, muted):
-        self.v_value.set_text(f"{round(value * 100)}")
-        icon = I["vol_off"] if muted or value <= 0.005 else I["vol_low"] if value < 0.5 else I["vol_high"]
-        self.v_button.set_label(icon)
-        set_class(self.v_button, "muted", muted)
 
     def set_volume(self, value):
-        self.show_volume(value, False)
+        self.muted = False
         self.apply("volume", lambda: self.audio.set(value))
 
     def set_brightness(self, value):
         value = max(Backlight.MIN, value)
-        self.b_value.set_text(f"{round(value * 100)}")
         self.apply("brightness", lambda: self.backlight.set(value))
 
     def toggle_mute(self):
@@ -1930,14 +2073,11 @@ class ControlCenter(AutoHide):
         column.set_name("session")
         column.set_valign(Gtk.Align.CENTER)
         self.session_buttons = {}
-        for key, icon, title, _confirm in self.SESSION:
+        for key, icon, _title, _confirm in self.SESSION:
             button = css(Gtk.Button(), "flat", "session-btn")
-            inner = vbox(3)
-            inner.pack_start(label(I[icon], "session-icon"), False, False, 0)
-            inner.pack_start(label(title, "session-label"), False, False, 0)
-            button.add(inner)
-            button.title_label = inner.get_children()[1]
-            button.title = title
+            button.title_label = label(I[icon], "session-icon")   # jen ikona; při potvrzování se změní na fajfku
+            button.title = I[icon]
+            button.add(button.title_label)
             button.connect("clicked", lambda _b, k=key: self.session_clicked(k))
             column.pack_start(button, False, False, 0)
             self.session_buttons[key] = button
@@ -1963,7 +2103,7 @@ class ControlCenter(AutoHide):
             self.armed = key
             button = self.session_buttons[key]
             set_class(button, "armed", True)
-            button.title_label.set_text("Sure?")
+            button.title_label.set_text(I["check"])     # druhé kliknutí potvrdí
             self.armed_timer = GLib.timeout_add(3000, self.disarm)
             return
         self.disarm()

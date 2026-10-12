@@ -19,8 +19,10 @@
 /* === Základ === */
 * {
   border: none;
-  font-family: "JetbrainsMono Nerd Font";
-  font-size: 13px;
+  font-family: "Nunito", "JetbrainsMono Nerd Font";
+  font-size: 14px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
   min-height: 0;
 }
 
@@ -52,15 +54,9 @@ window#waybar.hidden {
   margin-right: 10px;
 }
 
-/*
- * Stejná šířka levého a pravého ostrůvku.
- * Číslo musí být o něco větší než nejširší obsah z obou stran:
- *   - jedna strana je širší než druhá      -> číslo zvětši
- *   - uvnitř je u středu moc prázdného místa -> číslo zmenši
- */
 .modules-left,
 .modules-right {
-  min-width: 304px;
+  min-width: 0;
 }
 
 /* === Moduly uvnitř ostrůvků === */
@@ -90,9 +86,7 @@ window#waybar.hidden {
 }
 
 /* Větší mezera před začátkem každé skupiny (stejné skupiny jako dřív) */
-#battery,
-#custom-brave,
-#disk {
+#battery {
   margin-left: 9px;
 }
 

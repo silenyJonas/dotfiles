@@ -21,10 +21,6 @@
   ],
   "modules-right": [
     "network",
-    "custom/brave",
-    "custom/spotify",
-    "custom/codium",
-    "custom/discord",
     "disk",
     "bluetooth",
     "custom/power"
@@ -127,7 +123,7 @@
     "tooltip-format-disabled": "Bluetooth off"
   },
   "network": {
-    "format-wifi": "({signalStrength}%) ",
+    "format-wifi": "{signalStrength}% ",
     "format-ethernet": "{ifname} 󰈀",
     "format-disconnected": " Disconnected",
     "tooltip-format-wifi": " {essid} ({signalStrength}%) \nIP: {ipaddr}/{cidr}",
