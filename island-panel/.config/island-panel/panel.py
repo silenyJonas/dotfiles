@@ -102,6 +102,7 @@ QUICK_APPS = ["brave-browser|com.brave.Browser", "com.spotify.Client", "codium|c
               "dev.vencord.Vesktop"]
 # Aplikace, které se mají spouštět vlastním příkazem místo toho z jejich .desktop souboru
 APP_COMMANDS = {"codium": "codium --ozone-platform=wayland"}
+LOCK_COMMAND = "~/.config/hypr/lock/lock.py"   # zamykací obrazovka; když soubor chybí, zkusí se hyprlock, swaylock
 QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
 
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
@@ -1218,6 +1219,22 @@ def layer_window(app, namespace, edge=GtkLayerShell.Edge.TOP, overhang=0):
     return win
 
 
+_locked_cache = [0.0, False]
+
+
+def screen_locked():
+    """Běží zamykací obrazovka? Pak se žádný panel nesmí vysunout (výsledek platí půl sekundy)."""
+    now = time.monotonic()
+    if now - _locked_cache[0] > 0.5:
+        found = False
+        for pid in os.listdir("/proc"):
+            if pid.isdigit() and read(f"/proc/{pid}/comm") in ("hyprlock", "swaylock"):
+                found = True
+                break
+        _locked_cache[:] = [now, found]
+    return _locked_cache[1]
+
+
 class AutoHide:
     """Společné chování vysouvacích panelů: po odjetí kurzoru se panel schová.
 
@@ -1940,6 +1957,8 @@ class Panel(AutoHide):
 
     # ------------------------------------------------------------ zobrazení
     def show(self, by_key=False, tab=None):
+        if screen_locked():
+            return
         self.cancel_close()
         if tab:
             self.select(tab)
@@ -2307,6 +2326,8 @@ class SidePanel(AutoHide):
         return True
 
     def show(self, by_key=False):
+        if screen_locked():
+            return
         self.cancel_close()
         if self.visible:
             return
@@ -2484,6 +2505,22 @@ class NotificationServer:
     def _changed(self):
         for func in self.on_change:
             func()
+        self.save_summary()
+
+    def save_summary(self):
+        """Krátký výpis pro zamykací obrazovku: jen aplikace, nadpis a čas (bez textu zpráv)."""
+        if not self.active:
+            return
+        data = {"count": len(self.items), "dnd": self.dnd,
+                "items": [{"app": n.app, "summary": n.summary, "time": n.time} for n in self.items[:8]]}
+        path = os.path.join(STATE_DIR, "notifications.json")
+        try:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            with open(path + ".part", "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(path + ".part", path)
+        except OSError:
+            pass
 
     def _signal(self, name, *args):
         if self.conn:
@@ -2762,7 +2799,10 @@ class ControlCenter(AutoHide):
 
     def session_command(self, key):
         if key == "lock":
-            for cmd in (("swaylock",), ("hyprlock",), ("loginctl", "lock-session")):
+            custom = os.path.expanduser(LOCK_COMMAND)
+            if os.path.exists(custom):
+                return (sys.executable, custom) if custom.endswith(".py") else (custom,)
+            for cmd in (("hyprlock",), ("swaylock",), ("loginctl", "lock-session")):
                 if shutil.which(cmd[0]):
                     return cmd
             return None
@@ -3065,6 +3105,8 @@ class ControlCenter(AutoHide):
         return True
 
     def show(self, by_key=False):
+        if screen_locked():
+            return
         self.cancel_close()
         if self.visible:
             return
@@ -4468,6 +4510,8 @@ class WallpaperPicker:
         self.hide()
 
     def show(self):
+        if screen_locked():
+            return
         if self.visible:
             return
         if self.drop_timer is not None:
@@ -5186,6 +5230,8 @@ class Connections(AutoHide):
         return False
 
     def show(self, key=None):
+        if screen_locked():
+            return
         self.cancel_close()
         if key:
             self.select(key)
