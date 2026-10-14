@@ -108,6 +108,15 @@ QUICK_APP_LOOK = {
     "dev.vencord.Vesktop": ("Discord", ["discord", "com.discordapp.Discord", "dev.vencord.Vesktop"]),
     "com.spotify.Client": ("Spotify", ["spotify-client", "spotify", "com.spotify.Client"]),
 }
+# režimy výkonu (záložka Performance): profil napájení, jas, obnovovací frekvence vestavěného displeje,
+# efekty Hyprlandu (rozmazání, animace) a zákaz uspání. brightness None = jas se nemění.
+POWER_MODES = [
+    ("powersave",   "Powersave",   "\uf06c", dict(profile="power-saver", brightness=0.35, hz="min", effects=False, awake=False)),
+    ("balanced",    "Balanced",    "\uf24e", dict(profile="balanced",    brightness=0.70, hz="max", effects=True,  awake=False)),
+    ("performance", "Performance", "\uf0e4", dict(profile="performance", brightness=1.00, hz="max", effects=True,  awake=False)),
+    ("turbo",       "Turbo",       "\uf135", dict(profile="performance", brightness=1.00, hz="max", effects=True,  awake=True)),
+]
+IND_SECONDS = 0.28
 QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
 
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
@@ -999,6 +1008,96 @@ def human_bytes(value, per_second=False):
         value /= 1000
 
 
+class PowerModes:
+    """Přepínání režimů výkonu. Nic z toho nepotřebuje heslo: profil přes power-profiles-daemon / tuned,
+    jas přes logind, displej a efekty přes hyprctl."""
+    FILE = os.path.join(STATE_DIR, "power-mode")
+
+    def __init__(self):
+        self.current = read(self.FILE).strip() or None
+        self.busy, self.awake_proc = False, None
+        self.ppd = shutil.which("powerprofilesctl")
+        self.tuned = shutil.which("tuned-adm")
+        self.hyprctl = shutil.which("hyprctl")
+        if self.current is None:               # ještě nevybráno: odhadnout podle profilu napájení
+            self.current = {"power-saver": "powersave", "balanced": "balanced",
+                            "performance": "performance"}.get(self.active_profile() or "")
+
+    @staticmethod
+    def config(key):
+        return next((m[3] for m in POWER_MODES if m[0] == key), None)
+
+    def profile(self, name):
+        if self.ppd:
+            tool(self.ppd, "set", name)
+        elif self.tuned:
+            tool(self.tuned, "profile", {"power-saver": "powersave", "balanced": "balanced",
+                                         "performance": "throughput-performance"}[name])
+
+    def refresh_rate(self, which):
+        """Vestavěný displej (eDP) na nejnižší nebo nejvyšší frekvenci při stejném rozlišení."""
+        if not self.hyprctl:
+            return
+        _ok, out, _err = tool(self.hyprctl, "-j", "monitors")
+        try:
+            monitors = json.loads(out)
+        except ValueError:
+            return
+        for m in monitors:
+            if not m["name"].startswith(("eDP", "LVDS", "DSI")):
+                continue
+            size = f"{m['width']}x{m['height']}@"
+            rates = sorted({float(x.split("@")[1].rstrip("Hz")) for x in m.get("availableModes", [])
+                            if x.startswith(size)})
+            if not rates:
+                continue
+            rate = rates[0] if which == "min" else rates[-1]
+            if abs(rate - m["refreshRate"]) < 0.5:
+                continue
+            tool(self.hyprctl, "keyword", "monitor",
+                 f"{m['name']},{m['width']}x{m['height']}@{rate:.2f},{m['x']}x{m['y']},{m['scale']:g}")
+
+    def effects(self, on):
+        if self.hyprctl:
+            value = "true" if on else "false"
+            tool(self.hyprctl, "--batch", f"keyword decoration:blur:enabled {value} ; "
+                                          f"keyword animations:enabled {value} ; "
+                                          f"keyword decoration:shadow:enabled {value}")
+
+    def awake(self, on):
+        if on and self.awake_proc is None and shutil.which("systemd-inhibit"):
+            self.awake_proc = subprocess.Popen(
+                ["systemd-inhibit", "--what=idle:sleep", "--who=Island panel", "--why=Turbo mode",
+                 "sleep", "infinity"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif not on and self.awake_proc is not None:
+            self.awake_proc.terminate()
+            self.awake_proc = None
+
+    def apply(self, key, backlight=None, brightness=True):
+        """(běží na pozadí) Nastaví režim; brightness=False = jas nechat (obnova po přihlášení)."""
+        conf = self.config(key)
+        if conf is None:
+            return
+        self.profile(conf["profile"])
+        if brightness and backlight is not None and conf["brightness"] is not None:
+            backlight.set(conf["brightness"])
+        self.refresh_rate(conf["hz"])
+        self.effects(conf["effects"])
+        self.current = key
+        try:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            with open(self.FILE, "w") as f:
+                f.write(key)
+        except OSError:
+            pass
+
+    def active_profile(self):
+        if self.ppd:
+            _ok, out, _err = tool(self.ppd, "get")
+            return out.strip()
+        return None
+
+
 class Gpu:
     """Grafická karta: vytížení (AMD, NVIDIA), u Intelu aktuální takt vůči maximu; teplota, je-li čidlo."""
 
@@ -1345,6 +1444,12 @@ class Panel(AutoHide):
         self.app = app
         self.stats, self.mpris = Stats(), Mpris()
         self.gpu, self.net = Gpu(), NetStats()
+        self.power = PowerModes()
+        self.backlight = Backlight()
+        if self.power.current:                  # po přihlášení obnovit režim (jas se nemění)
+            mode = self.power.current
+            threading.Thread(target=lambda: self.power.apply(mode, brightness=False), daemon=True).start()
+            self.power.awake(bool((self.power.config(mode) or {}).get("awake")))
         self.mount_index = 0
         self.visible = False
         self.close_timer = self.tick_timer = None
@@ -1357,10 +1462,17 @@ class Panel(AutoHide):
         self.win.connect("key-press-event", self.on_key)
         self.win.connect("delete-event", lambda *_: self.hide() or True)
 
-        root = vbox(0)
+        root = self.root = vbox(0)
         root.set_name("panel")
         root.set_size_request(PANEL_WIDTH, -1)
-        self.win.add(root)
+        root.set_valign(Gtk.Align.START)
+        # okno má stálou výšku (nejvyšší záložka) a nikdy se nezvětšuje ani nezmenšuje;
+        # panel uvnitř je jen tak vysoký, jak je potřeba, zbytek okna je průhledný a propouští klikání
+        outer = Gtk.Fixed()                     # panel vždy přilepený k hornímu okraji okna
+        outer.put(root, 0, 0)
+        outer.show()
+        self.win.add(outer)
+        self.win.connect("size-allocate", lambda *_: self.update_input())
 
         # --- záložky
         tabs = hbox(0, "tabs")
@@ -1375,12 +1487,33 @@ class Panel(AutoHide):
             btn.connect("clicked", lambda _b, n=name: self.select(n))
             tabs.pack_start(btn, True, True, 0)
             self.tab_buttons[name] = btn
-        root.pack_start(tabs, False, False, 0)
+        # čára pod aktivní záložkou: kreslí se zvlášť a k nové záložce přejede
+        self.tabs_box = tabs
+        self.ind = Gtk.DrawingArea()
+        self.ind.set_size_request(-1, 2)
+        self.ind.set_valign(Gtk.Align.END)
+        self.ind.set_halign(Gtk.Align.FILL)
+        css(self.ind, "tab-indicator")
+        self.ind_pos, self.ind_tab, self.ind_tick = None, None, None
+        self.ind.connect("draw", self.draw_indicator)
+        tabs.connect("size-allocate", lambda *_: self.move_indicator(animate=False, layout=True))
+        overlay = Gtk.Overlay()
+        overlay.add(tabs)
+        overlay.add_overlay(self.ind)
+        overlay.set_overlay_pass_through(self.ind, True)
+        overlay.set_margin_bottom(10)
+        root.pack_start(overlay, False, False, 0)
 
-        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=160)
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=220)
         self.stack.set_hhomogeneous(True)
-        self.stack.set_vhomogeneous(True)
-        root.pack_start(self.stack, True, True, 0)
+        self.stack.set_vhomogeneous(False)      # každá záložka jen tak vysoká, jak potřebuje
+        self.height_tick, self.body_h = None, None
+        # obsah záložek je v "okénku" s výškou, kterou plynule měníme sami; lišta záložek nahoře se nehne
+        self.body = Gtk.ScrolledWindow()
+        self.body.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.EXTERNAL)
+        self.body.set_propagate_natural_width(True)
+        self.body.add(self.stack)
+        root.pack_start(self.body, False, False, 0)
         self.stack.add_named(self.build_dashboard(), "dashboard")
         self.stack.add_named(self.build_media(), "media")
         self.stack.add_named(self.build_performance(), "performance")
@@ -1389,6 +1522,8 @@ class Panel(AutoHide):
         self.select("dashboard")
 
         GLib.timeout_add_seconds(2, self.background_sample)
+        # seznam aplikací připravit hned, ať se výška okna (podle nejvyšší záložky) nemusí měnit později
+        GLib.idle_add(lambda: (self.ensure_apps(), self.fix_window_height()) and False)
 
     # ------------------------------------------------------------ stránky
     def build_dashboard(self):
@@ -1493,7 +1628,7 @@ class Panel(AutoHide):
 
     def build_media(self):
         page = hbox(22, "page", "tile", "media-page")
-        self.b_art = SpinArt(220)
+        self.b_art = SpinArt(176)
         self.b_art.set_valign(Gtk.Align.CENTER)
         page.pack_start(self.b_art, False, False, 0)
 
@@ -1604,7 +1739,7 @@ class Panel(AutoHide):
 
         bottom = hbox(8)
         storage = hbox(12, "tile", "perf-card")
-        self.p_disk = RingGauge(100)
+        self.p_disk = RingGauge(84)
         storage.pack_start(self.p_disk, False, False, 0)
         sinfo = vbox(6)
         sinfo.set_valign(Gtk.Align.CENTER)
@@ -1619,7 +1754,24 @@ class Panel(AutoHide):
         self.p_disk_detail.set_width_chars(16)
         sinfo.pack_start(self.p_disk_detail, False, False, 0)
         storage.pack_start(sinfo, False, False, 0)
-        bottom.pack_start(storage, False, False, 0)
+        column = vbox(8)
+        column.pack_start(storage, True, True, 0)
+        modes = vbox(6, "tile", "perf-card", "power-card")
+        mode_grid = Gtk.Grid(column_spacing=6, row_spacing=6, column_homogeneous=True)
+        self.p_modes = {}
+        for index, (key, title, icon, _conf) in enumerate(POWER_MODES):
+            button = css(Gtk.Button(), "flat", "power-mode")
+            inner = hbox(8)
+            inner.pack_start(label(icon, "power-icon"), False, False, 0)
+            inner.pack_start(label(title, "power-name", xalign=0), True, True, 0)
+            button.add(inner)
+            button.set_can_focus(False)
+            button.connect("clicked", lambda _b, k=key: self.set_power_mode(k))
+            mode_grid.attach(button, index % 2, index // 2, 1, 1)
+            self.p_modes[key] = button
+        modes.pack_start(mode_grid, False, False, 0)
+        column.pack_start(modes, False, False, 0)
+        bottom.pack_start(column, False, False, 0)
 
         net = vbox(4, "tile", "perf-card")
         net.pack_start(label(f"{I['updown']}  Network", "perf-title", xalign=0), False, False, 0)
@@ -1696,6 +1848,7 @@ class Panel(AutoHide):
         self.search.connect("activate", lambda *_: self.launch_first())
         page.pack_start(self.search, False, False, 0)
         scroll = css(Gtk.ScrolledWindow(), "tile", "apps-scroll")
+        scroll.set_size_request(-1, 250)        # seznam aplikací má pevnou výšku, posouvá se
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.flow = Gtk.FlowBox(homogeneous=True, column_spacing=4, row_spacing=4,
                                 min_children_per_line=6, max_children_per_line=6,
@@ -1839,12 +1992,124 @@ class Panel(AutoHide):
     # ------------------------------------------------------------ záložky
     def select(self, name):
         self.stack.set_visible_child_name(name)
+        self.follow_height()
+        GLib.idle_add(lambda: self.move_indicator() and False)
         for key, btn in self.tab_buttons.items():
             set_class(btn, "active", key == name)
         if name == "apps":
             self.ensure_apps()
             self.search.grab_focus()
         self.refresh()
+
+    def indicator_target(self):
+        btn = self.tab_buttons.get(self.stack.get_visible_child_name())
+        if btn is None:
+            return None
+        a, base = btn.get_allocation(), self.tabs_box.get_allocation()
+        if a.width <= 1:
+            return None
+        return (a.x - base.x, a.width)
+
+    def move_indicator(self, animate=True, layout=False):
+        target = self.indicator_target()
+        if target is None:
+            return
+        tab = self.stack.get_visible_child_name()
+        if layout and self.ind_pos is not None and tab != self.ind_tab:
+            return                           # záložka se právě mění, čáru posune animace
+        self.ind_tab = tab
+        if self.ind_pos is None or not animate or not self.ind.get_mapped():
+            if self.ind_tick is not None:
+                return                       # běží animace, ta skončí na správném místě
+            self.ind_pos = target
+            self.ind.queue_draw()
+            return
+        start, began = self.ind_pos, time.monotonic()
+
+        def tick(_widget, _clock):
+            t = min(1.0, (time.monotonic() - began) / IND_SECONDS)
+            e = 1 - (1 - t) ** 3
+            goal = self.indicator_target() or target
+            self.ind_pos = (start[0] + (goal[0] - start[0]) * e, start[1] + (goal[1] - start[1]) * e)
+            self.ind.queue_draw()
+            if t < 1.0:
+                return GLib.SOURCE_CONTINUE
+            self.ind_tick = None
+            return GLib.SOURCE_REMOVE
+        if self.ind_tick is not None:
+            self.ind.remove_tick_callback(self.ind_tick)
+        self.ind_tick = self.ind.add_tick_callback(tick)
+
+    def draw_indicator(self, widget, cr):
+        if self.ind_pos is None:
+            return False
+        x, width = self.ind_pos
+        fg = widget.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        cr.set_source_rgba(fg.red, fg.green, fg.blue, fg.alpha)
+        h = widget.get_allocated_height()
+        r = h / 2
+        cr.new_sub_path()
+        cr.arc(x + r, r, r, math.pi / 2, 3 * math.pi / 2)
+        cr.arc(x + width - r, r, r, -math.pi / 2, math.pi / 2)
+        cr.close_path()
+        cr.fill()
+        return False
+
+    def follow_height(self, animate=True):
+        """Výška obsahu podle viditelné záložky; mění se plynule a okno se přizpůsobuje každý snímek."""
+        page = self.stack.get_visible_child()
+        if page is None:
+            return
+        width = self.stack.get_allocated_width() or PANEL_WIDTH
+        target = page.get_preferred_height_for_width(width)[1]
+        start = self.body_h if self.body_h is not None else target
+        if target == start and self.height_tick is None:
+            self.apply_height(target)
+            return
+        if not animate or not self.win.get_mapped():
+            self.apply_height(target)
+            return
+        began, length = time.monotonic(), 0.24
+
+        def tick(_widget, _clock):
+            t = min(1.0, (time.monotonic() - began) / length)
+            eased = 1 - (1 - t) ** 3
+            self.apply_height(round(start + (target - start) * eased))
+            if t < 1.0:
+                return GLib.SOURCE_CONTINUE
+            self.height_tick = None
+            return GLib.SOURCE_REMOVE
+        if self.height_tick is not None:
+            self.win.remove_tick_callback(self.height_tick)
+        self.height_tick = self.win.add_tick_callback(tick)
+
+    def apply_height(self, height):
+        self.body_h = height
+        self.body.set_max_content_height(-1)      # pořadí kvůli kontrole min <= max v GTK
+        self.body.set_min_content_height(height)
+        self.body.set_max_content_height(height)
+        self.fix_window_height()
+        self.update_input()
+
+    def fix_window_height(self):
+        """Stálá výška okna = lišta záložek + nejvyšší záložka (roste jen když některá záložka naroste)."""
+        width = self.stack.get_allocated_width() or PANEL_WIDTH
+        tallest = max(page.get_preferred_height_for_width(width)[1] for page in self.stack.get_children())
+        tabs = self.root.get_preferred_height()[1] - (self.body_h or 0)
+        need = tabs + tallest + 4
+        if need > getattr(self, "win_h", 0):
+            self.win_h = need
+            self.win.set_size_request(-1, need)
+
+    def update_input(self):
+        """Klikat a najíždět jde jen na viditelný panel, ne na průhlednou část pod ním."""
+        gdk_win = self.win.get_window()
+        if gdk_win is None:
+            return
+        area = self.root.get_allocation()
+        height = self.root.get_preferred_height_for_width(max(1, area.width))[1]
+        gdk_win.input_shape_combine_region(
+            cairo.Region(cairo.RectangleInt(area.x, area.y, max(1, area.width), max(1, height))), 0, 0)
 
     @property
     def tab(self):
@@ -1869,6 +2134,8 @@ class Panel(AutoHide):
     def refresh(self):
         if not self.visible:
             return
+        if self.height_tick is None:            # obsah se změnil (např. přibyl přehrávač) -> výšku dorovnat
+            GLib.idle_add(lambda: self.follow_height() and False)
         now = datetime.datetime.now()
         self.c_hour.set_text(f"{now.hour:02d}")
         self.c_min.set_text(f"{now.minute:02d}")
@@ -1888,7 +2155,31 @@ class Panel(AutoHide):
         elif self.tab == "performance":
             self.refresh_performance()
 
+    def set_power_mode(self, key):
+        if self.power.busy:
+            return
+        self.power.busy = True
+        self.power.awake(bool((self.power.config(key) or {}).get("awake")))
+        self.power.current = key
+        self.refresh_power_modes()
+
+        def work():
+            self.power.apply(key, self.backlight)
+            GLib.idle_add(done)
+
+        def done():
+            self.power.busy = False
+            self.refresh_power_modes()
+            return False
+        threading.Thread(target=work, daemon=True).start()
+
+    def refresh_power_modes(self):
+        for key, button in self.p_modes.items():
+            set_class(button, "on", key == self.power.current)
+            button.set_sensitive(not self.power.busy)
+
     def refresh_performance(self):
+        self.refresh_power_modes()
         def card(widgets, usage, temp, metric="Usage"):
             widgets["badge"].set(f"{usage:.0f}%" if usage is not None else "—")
             widgets["metric"].set_text(metric)
@@ -5473,7 +5764,7 @@ class Connections(AutoHide):
         root.pack_start(head, False, False, 0)
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack.set_transition_duration(120)
+        self.stack.set_transition_duration(180)
         self.stack.set_vhomogeneous(False)
         self.stack.set_interpolate_size(True)
         for key, page in self.pages.items():
@@ -5518,9 +5809,11 @@ class Connections(AutoHide):
             set_class(tab, "active", name == key)
         self.stack.set_visible_child_name(key)
         self.page_changed(self.page())
-        self.fit()
+        # okno se zmenší až po prolnutí, jinak by se animace useknula
+        GLib.timeout_add(self.stack.get_transition_duration() + 20, lambda: self.fit() and False)
         if self.visible:
-            self.page().refresh(deep=True)
+            GLib.timeout_add(self.stack.get_transition_duration() + 20,
+                             lambda: self.page().refresh(deep=True) and False)
 
     def page_changed(self, page):
         """Stránka má nová data: srovnat přepínač nahoře."""
@@ -5590,6 +5883,9 @@ class Connections(AutoHide):
         self.visible = True
         self.win.show()
         self.page().refresh(deep=True)
+        for other in self.pages.values():       # ostatní záložky načíst předem, ať se při přepnutí neskáče
+            if other is not self.page():
+                other.refresh()
         if self.tick_timer is None:
             self.tick_timer = GLib.timeout_add_seconds(3, self.tick)
 

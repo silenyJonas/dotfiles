@@ -60,7 +60,6 @@ button.flat {
 
 /* === Záložky === */
 .tabs {
-  margin-bottom: 10px;
   border-bottom: 1px solid alpha(@fg, 0.08);
 }
 
@@ -85,8 +84,8 @@ button.tab.active label {
   color: @fg;
 }
 
-button.tab.active {
-  border-bottom-color: @fg;
+.tab-indicator {
+  color: @fg;          /* čára pod aktivní záložkou (přejíždí) */
 }
 
 /* === Dlaždice === */
@@ -244,7 +243,7 @@ button.media-btn.large.primary {
 }
 
 .media-page {
-  padding: 22px;
+  padding: 16px 20px;
 }
 
 .spin-art {
@@ -974,4 +973,42 @@ switch.net-switch:checked slider {
 
 .vpn-caret.open {
   color: @accent;
+}
+
+/* --- režimy výkonu --- */
+.power-card {
+  padding: 10px;
+}
+
+button.power-mode {
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: @hover;
+  transition: background 150ms ease;
+}
+
+button.power-mode:hover {
+  background: alpha(@fg, 0.18);
+}
+
+button.power-mode .power-icon {
+  color: @accent;
+  font-size: 14px;
+  min-width: 16px;
+}
+
+button.power-mode .power-name {
+  font-size: 12.5px;
+}
+
+button.power-mode.on {
+  background: @pill;
+}
+
+button.power-mode.on label {
+  color: @pill_fg;
+}
+
+button.power-mode:disabled {
+  opacity: 0.7;
 }
