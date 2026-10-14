@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Spotify
+GenericName=Music Player
+Icon=/usr/share/icons/Papirus/64x64/apps/spotify-client.svg
+Exec=/home/joncl/.local/bin/spotify-launch %U
+Terminal=false
+MimeType=x-scheme-handler/spotify;
+Categories=Audio;Music;Player;AudioVideo;
+StartupWMClass=spotify
+X-GNOME-UsesNotifications=true
+X-Flatpak-Tags=proprietary;
+X-Flatpak=com.spotify.Client

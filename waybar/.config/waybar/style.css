@@ -76,6 +76,7 @@ window#waybar.hidden {
 #custom-discord,
 #disk,
 #bluetooth,
+#custom-vpn,
 #custom-power {
   color: @fg;
   background: transparent;
@@ -168,7 +169,8 @@ window#waybar.hidden {
 #custom-codium:hover,
 #custom-discord:hover,
 #disk:hover,
-#bluetooth:hover {
+#bluetooth:hover,
+#custom-vpn:hover {
   background: @hover;
 }
 
@@ -205,4 +207,13 @@ tooltip label {
   border-radius: 11px;
   margin: 0 1px;
   padding: 3px 9px;
+}
+
+/* VPN: šedý štít = vypnuto, barevný = IP skrytá */
+#custom-vpn.off {
+  color: @fg_dim;
+}
+
+#custom-vpn.on {
+  color: #7dbedc;
 }

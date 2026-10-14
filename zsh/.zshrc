@@ -100,3 +100,11 @@ spotify() {
 
 export PATH=$PATH:/home/joncl/.spicetify
 alias spotify='~/.local/bin/spotify-launch'
+
+# --- island: odpojené GUI programy (zavření konzole je neukončí, konzole hned zase poslouchá)
+setopt NO_HUP NO_CHECK_JOBS
+detach() { (setsid "$@" >/dev/null 2>&1 &) }
+for _app in kwrite kate dolphin okular gwenview ark brave-browser codium nautilus loupe evince; do
+  command -v $_app >/dev/null && alias $_app="detach $_app"
+done
+unset _app

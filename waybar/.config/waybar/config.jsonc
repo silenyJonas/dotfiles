@@ -24,6 +24,7 @@
     "network",
     "disk",
     "bluetooth",
+    "custom/vpn",
     "custom/power"
   ],
 
@@ -127,6 +128,11 @@
     "exec": "python3 ~/.config/waybar/scripts/netspeed.py",
     "return-type": "json",
     "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --wifi"
+  },
+  "custom/vpn": {
+    "exec": "python3 ~/.config/waybar/scripts/vpn-status.py",
+    "return-type": "json",
+    "on-click": "/usr/bin/python3 ~/.config/island-panel/panel.py --vpn"
   },
   "network": {
     "format-wifi": "{signalStrength}% ",

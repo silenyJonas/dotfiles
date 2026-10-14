@@ -103,6 +103,11 @@ QUICK_APPS = ["brave-browser|com.brave.Browser", "com.spotify.Client", "codium|c
 # Aplikace, které se mají spouštět vlastním příkazem místo toho z jejich .desktop souboru
 APP_COMMANDS = {"codium": "codium --ozone-platform=wayland"}
 LOCK_COMMAND = "~/.config/hypr/lock/lock.py"   # zamykací obrazovka; když soubor chybí, zkusí se hyprlock, swaylock
+# vlastní jméno a ikona v rychlých aplikacích: id aplikace -> (jméno, [ikony k vyzkoušení])
+QUICK_APP_LOOK = {
+    "dev.vencord.Vesktop": ("Discord", ["discord", "com.discordapp.Discord", "dev.vencord.Vesktop"]),
+    "com.spotify.Client": ("Spotify", ["spotify-client", "spotify", "com.spotify.Client"]),
+}
 QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
 
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
@@ -155,7 +160,7 @@ I = {
     "star": "\uf005", "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
     "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
     "gpu": "\uf26c", "updown": "\uf0ec", "bolt": "\uf0e7", "caret": "\uf0d7",
-    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db",
+    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db", "shield": "\uf132", "globe": "\uf0ac",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
@@ -1201,6 +1206,47 @@ def app_by_key(key):
         return None
 
 
+ICON_DIRS = ["/usr/share/icons/Papirus/64x64/apps", "/usr/share/icons/Papirus-Dark/64x64/apps",
+             "/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps",
+             "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps",
+             "/var/lib/flatpak/exports/share/icons/hicolor/128x128/apps",
+             os.path.expanduser("~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps"),
+             os.path.expanduser("~/.local/share/icons")]
+
+
+def app_icon(app, names=(), size=36):
+    """Ikona aplikace: nejdřív zadaná jména (téma ikon, pak i Papirus a Flatpak složky napřímo),
+    potom ikona z .desktop souboru; když nic nejde načíst, obecná ikona programu."""
+    theme = Gtk.IconTheme.get_default()
+    candidates = list(names)
+    icon = app.get_icon() if app else None
+    if isinstance(icon, Gio.ThemedIcon):
+        candidates += icon.get_names()
+    elif isinstance(icon, Gio.FileIcon) and icon.get_file().get_path():
+        candidates.append(icon.get_file().get_path())
+    for name in candidates:
+        paths = [name] if name.startswith("/") else []
+        if not paths and theme.has_icon(name):
+            info = theme.lookup_icon(name, size, Gtk.IconLookupFlags.FORCE_SIZE)
+            if info and info.get_filename():
+                paths.append(info.get_filename())
+        if not name.startswith("/"):
+            paths += [os.path.join(d, name + ext) for d in ICON_DIRS for ext in (".svg", ".png")]
+        for path in paths:
+            if os.path.exists(path):
+                try:
+                    display = Gdk.Display.get_default()
+                    scale = max([display.get_monitor(i).get_scale_factor()
+                                 for i in range(display.get_n_monitors())] or [1])   # ostrá i na HiDPI
+                    pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, size * scale, size * scale, True)
+                    return Gtk.Image.new_from_surface(Gdk.cairo_surface_create_from_pixbuf(pix, scale, None))
+                except GLib.Error:
+                    continue
+    image = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DND)
+    image.set_pixel_size(size)
+    return image
+
+
 def layer_window(app, namespace, edge=GtkLayerShell.Edge.TOP, overhang=0):
     win = Gtk.Window(application=app)
     win.set_decorated(False)
@@ -1242,6 +1288,7 @@ class AutoHide:
     """
 
     def watch_pointer(self):
+        self.hovering = False
         self.companions = []   # další okna, která se počítají jako "kurzor je pořád nad panelem"
         self.win.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
         self.win.connect("enter-notify-event", self.on_enter)
@@ -1273,15 +1320,19 @@ class AutoHide:
 
     def close_if_outside(self):
         self.close_timer = None
-        if not self.pointer_inside():
+        if not getattr(self, "hovering", False) and not self.pointer_inside():
             self.hide()
         return False
 
     def on_enter(self, _win, _event):
+        self.hovering = True
         self.cancel_close()
         return False
 
-    def on_leave(self, _win, _event):
+    def on_leave(self, _win, event):
+        if event.detail == Gdk.NotifyType.INFERIOR:
+            return False          # kurzor jen přejel na prvek uvnitř okna
+        self.hovering = False
         self.cancel_close()
         self.close_timer = GLib.timeout_add(CLOSE_DELAY_MS, self.close_if_outside)
         return False
@@ -1728,12 +1779,10 @@ class Panel(AutoHide):
         for key in keys[:QUICK_APPS_MAX]:
             app = app_by_key(key)
             item = vbox(4)
-            icon = app.get_icon()
-            image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.DND) if icon else \
-                Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DND)
-            image.set_pixel_size(36)
+            name, icons = QUICK_APP_LOOK.get(key, (None, []))
+            image = app_icon(app, icons, 36)
             item.pack_start(image, False, False, 0)
-            item.pack_start(label(app.get_display_name() or key, "app-name", ellipsize=True), False, False, 0)
+            item.pack_start(label(name or app.get_display_name() or key, "app-name", ellipsize=True), False, False, 0)
             button = css(Gtk.Button(), "flat", "quick-app")
             button.add(item)
             button.set_can_focus(False)
@@ -4622,6 +4671,8 @@ class ConnPage:
         self.secret, self.reveal = "", False       # rozepsané heslo
         self.loading, self.deep, self.loaded_once, self.drawn = False, False, False, None
         self.entry = None
+        self.switching, self.switch_error = None, ""      # cílový stav přepínače, dokud se pracuje
+        self.settle = None                                # kdy práce skončila (čeká se na potvrzení stavu)
 
         self.box = vbox(8)
         self.note = label("", "dim", "small", xalign=0)
@@ -4680,6 +4731,9 @@ class ConnPage:
         self.loading, self.loaded_once = False, True
         if isinstance(result, tuple):
             self.power, self.items = result
+        if self.settle is not None and (bool(self.power) == self.switching or self.switch_error
+                                        or time.monotonic() - self.settle > 4):
+            self.switching = self.settle = None
         if self.expanded is not None and not any(i["key"] == self.expanded for i in self.items):
             self.collapse()
         self.render()
@@ -4697,21 +4751,26 @@ class ConnPage:
         self.expanded, self.message, self.failed, self.secret, self.reveal = None, "", False, "", False
 
     # --- kreslení seznamu ---
-    def render(self):
+    def note_text(self):
         if self.power is None:
-            note = self.missing_text if self.loaded_once else "Loading…"
-        elif not self.power:
-            note = self.off_text
-        elif not self.items:
-            note = "Searching…" if self.scanning() else self.empty_text
-        else:
-            note = ""
+            return self.missing_text if self.loaded_once else "Loading…"
+        if not self.power:
+            return self.off_text
+        if not self.items:
+            return "Searching…" if self.scanning() else self.empty_text
+        return ""
+
+    def shown_items(self):
+        return self.items if self.power else []
+
+    def render(self):
+        note = self.note_text()
         self.owner.page_changed(self)
         if note != self.note.get_text():
             self.note.set_text(note)
             self.note.set_visible(bool(note))
             self.owner.fit()
-        shown = self.items if self.power else []
+        shown = self.shown_items()
         state = (repr(shown), self.expanded, self.busy, self.message, self.failed, self.reveal)
         if state == self.drawn:
             return
@@ -4971,6 +5030,285 @@ class WifiPage(ConnPage):
         return None if ok else (err or out).strip().removeprefix("Error: ")
 
 
+class VpnPage(ConnPage):
+    """VPN přes NetworkManager (WireGuard / OpenVPN profily). Přepínač nahoře = skrýt IP adresu."""
+    key, title = "vpn", "VPN"
+    manager, manager_label = "nm-connection-editor", "Edit VPN connections…"
+    off_text = "VPN is off. Your real IP address is visible."
+    missing_text = "NetworkManager is not responding."
+    empty_text = "No VPN connections. Import a WireGuard .conf file first."
+    TYPES = ("wireguard", "vpn")
+    IP_URL = "https://ipinfo.io/json"
+
+    def __init__(self, owner):
+        self.nmcli = shutil.which("nmcli") or "nmcli"
+        self.ip, self.ip_for, self.ip_at = None, None, 0.0
+        self.open_groups, self.pings, self.pinged_at = set(), {}, 0.0
+        super().__init__(owner)
+        # karta s veřejnou IP adresou nad seznamem
+        card = hbox(12, "net-row", "vpn-card")
+        self.v_icon = label(I["shield"], "vpn-icon")
+        card.pack_start(self.v_icon, False, False, 0)
+        self.v_spin = Gtk.Spinner()
+        self.v_spin.set_size_request(22, 22)
+        self.v_spin.set_margin_start(6)
+        self.v_spin.set_margin_end(6)
+        self.v_spin.set_no_show_all(True)
+        css(self.v_spin, "vpn-spin")
+        card.pack_start(self.v_spin, False, False, 0)
+        text = vbox(1)
+        text.set_valign(Gtk.Align.CENTER)
+        self.v_state = label("Checking…", "net-name", xalign=0)
+        self.v_ip = label("", "dim", "small", xalign=0, ellipsize=True)
+        text.pack_start(self.v_state, False, False, 0)
+        text.pack_start(self.v_ip, False, False, 0)
+        card.pack_start(text, True, True, 0)
+        self.v_fast = Connections.button(label("Fastest"), "flat", "net-btn", "primary")
+        self.v_fast.set_valign(Gtk.Align.CENTER)
+        self.v_fast.connect("clicked", lambda _b: self.connect_fastest())
+        card.pack_start(self.v_fast, False, False, 0)
+        card.show_all()
+        self.box.pack_start(card, False, False, 0)
+        self.box.reorder_child(card, 0)
+
+    def profiles(self):
+        ok, out, _err = tool(self.nmcli, "-t", "-f", "UUID,TYPE,NAME,AUTOCONNECT,ACTIVE", "connection", "show")
+        if not ok:
+            return None
+        found = []
+        for f in map(split_terse, out.splitlines()):
+            if len(f) >= 5 and f[1] in self.TYPES:
+                country, number = self.parse(f[2])
+                found.append({"key": f[0], "uuid": f[0], "conn": f[2], "country": country, "number": number,
+                              "name": f"{country} {number}".strip(), "auto": f[3] == "yes",
+                              "active": f[4] == "yes"})
+        return sorted(found, key=lambda i: (i["country"], int(i["number"][1:] or 0) if i["number"] else 0))
+
+    COUNTRIES = {"nl": "Netherlands", "pl": "Poland", "ro": "Romania", "rum": "Romania", "jp": "Japan",
+                 "us": "United States", "de": "Germany", "at": "Austria", "ch": "Switzerland", "ca": "Canada",
+                 "mx": "Mexico", "no": "Norway", "sg": "Singapore", "uk": "United Kingdom"}
+
+    def parse(self, name):
+        """proton-nl121 -> ("Netherlands", "#121"), proton-pl -> ("Poland", ""); jiné jméno zůstane, jak je."""
+        match = re.fullmatch(r"(?:[a-z]+-)?([a-z]{2,3})-?(\d*)", name.lower())
+        if match and match.group(1) in self.COUNTRIES:
+            return self.COUNTRIES[match.group(1)], f"#{match.group(2)}" if match.group(2) else ""
+        return name, ""
+
+    CONF_DIR = os.path.expanduser("~/.local/share/island-vpn")
+
+    def endpoint(self, conn):
+        """Adresa serveru ze záložního .conf souboru (do NetworkManageru by to chtělo heslo roota)."""
+        for line in read(os.path.join(self.CONF_DIR, conn + ".conf")).splitlines():
+            key, _, value = line.partition("=")
+            if key.strip().lower() == "endpoint":
+                return value.strip().rsplit(":", 1)[0].strip("[]")
+        return None
+
+    def measure(self, items):
+        """Odezva všech serverů najednou (ping), obnovuje se jednou za minutu."""
+        if time.monotonic() - self.pinged_at < 60 and all(i["uuid"] in self.pings for i in items):
+            return
+        results = {}
+
+        def one(item):
+            host = self.endpoint(item["conn"])
+            ok, out, _err = tool("ping", "-c", "2", "-i", "0.3", "-W", "1", "-q", host, timeout=5) if host else (False, "", "")
+            match = re.search(r"= [\d.]+/([\d.]+)/", out)
+            results[item["uuid"]] = float(match.group(1)) if ok and match else None
+
+        threads = [threading.Thread(target=one, args=(i,), daemon=True) for i in items]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(6)
+        self.pings, self.pinged_at = results, time.monotonic()
+
+    def groups(self):
+        """Seznam zemí: (země, servery)."""
+        found = {}
+        for item in self.items:
+            found.setdefault(item["country"], []).append(item)
+        return list(found.items())
+
+    def shown_items(self):
+        """Řádky: hlavička země (rozbalovací), pod ní její servery, když je rozbalená."""
+        rows = []
+        for country, servers in self.groups():
+            if len(self.items) <= 3 or len(self.groups()) == 1:
+                return list(self.items)           # pár serverů = bez skupin
+            active = any(s["active"] for s in servers)
+            opened = country in self.open_groups
+            pings = [self.pings.get(s["uuid"]) for s in servers]
+            best = min((p for p in pings if p is not None), default=None)
+            rows.append({"key": "grp:" + country, "header": True, "name": country, "open": opened,
+                         "count": len(servers), "best": best, "active": active})
+            if opened:
+                rows += [dict(s, name=s["number"] or s["name"], ping=self.pings.get(s["uuid"]), child=True)
+                         for s in servers]
+        return rows
+
+    def find(self, key):
+        return next((i for i in self.items if i["key"] == key), None)
+
+    def toggle(self, key):
+        if key.startswith("grp:"):
+            country = key[4:]
+            self.open_groups.symmetric_difference_update({country})
+            self.render()
+            return
+        super().toggle(key)
+
+    def row(self, item):
+        box = super().row(item)
+        set_class(box, "vpn-child", bool(item.get("child")))
+        set_class(box, "vpn-group", bool(item.get("header")))
+        return box
+
+    def fastest(self):
+        candidates = [(p, i) for i in self.items if (p := self.pings.get(i["uuid"])) is not None]
+        return min(candidates, key=lambda c: c[0])[1] if candidates else (self.items[0] if self.items else None)
+
+    def connect_fastest(self):
+        target = self.fastest()
+        if target is not None:
+            self.act(target, lambda: self.up(target))
+
+    def public_ip(self, active):
+        """Veřejná IP a země; zjišťuje se jen po změně VPN nebo jednou za 2 minuty."""
+        signature = tuple(i["uuid"] for i in active)
+        if signature == self.ip_for and time.monotonic() - self.ip_at < 120:
+            return self.ip
+        if signature != self.ip_for and active:
+            time.sleep(1.0)                   # trasa přes VPN se chvíli nastavuje
+        try:
+            req = urllib.request.Request(self.IP_URL, headers={"User-Agent": "curl/8", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            place = ", ".join(x for x in (data.get("city"), data.get("country")) if x)
+            self.ip = (data.get("ip", "?"), place)
+        except Exception:
+            self.ip = None
+        self.ip_for, self.ip_at = signature, time.monotonic()
+        return self.ip
+
+    def load(self, deep):
+        items = self.profiles()
+        if items is None:
+            return None, []
+        if deep:
+            self.ip_for = None              # tlačítko obnovit = znovu zjistit IP adresu
+        active = [i for i in items if i["active"]]
+        self.public_ip(active)
+        self.measure(items)
+        if not self.loaded_once:            # poprvé rozbalit zemi, přes kterou se právě jede
+            self.open_groups |= {i["country"] for i in active}
+        return bool(active), items
+
+    def render(self):
+        super().render()
+        on = bool(self.power)
+        set_class(self.v_icon, "on", on)
+        working = self.switching is not None or self.busy is not None
+        self.v_icon.set_visible(not working)
+        self.v_spin.set_visible(working)
+        (self.v_spin.start if working else self.v_spin.stop)()
+        self.v_fast.set_visible(len(self.items) > 1 and self.busy is None and self.switching is None)
+        self.v_state.set_text("Your IP is hidden" if on else ("Your IP is visible" if self.power is not None else "Checking…"))
+        if self.ip:
+            ip, place = self.ip
+            self.v_ip.set_text(f"{ip}  ·  {place}" if place else ip)
+        else:
+            self.v_ip.set_text("IP address unknown (offline?)" if self.loaded_once else "")
+        if working:
+            going = self.find(self.busy) if self.busy is not None else (self.target() if self.switching else None)
+            busy_item = self.find(self.busy)
+            leaving = self.switching is False or (busy_item is not None and busy_item["active"])
+            self.v_state.set_text("Disconnecting…" if leaving else "Connecting…")
+            if going is not None and not leaving:
+                self.v_ip.set_text(f"to {going['name']}")
+        elif self.switch_error:
+            self.v_state.set_text("Could not connect")
+            self.v_ip.set_text(self.switch_error)
+
+    def note_text(self):
+        if self.power is not None and not self.items:
+            return self.empty_text
+        return "" if self.power is not None else super().note_text()
+
+
+    def scanning(self):
+        return False
+
+    def target(self):
+        """Ke kterému serveru se přepínač připojí: s automatickým startem, jinak s nejlepší odezvou."""
+        return next((i for i in self.items if i["auto"]), None) or self.fastest()
+
+    def set_power(self, on):
+        self.ip_for = None
+        if on:
+            target = self.target()
+            if target is None:
+                return "No VPN servers imported."
+            ok, out, err = tool(self.nmcli, "-w", "25", "connection", "up", "uuid", target["uuid"], timeout=35)
+            if not ok:
+                return ((err or out).strip().splitlines() or ["Could not connect."])[-1].removeprefix("Error: ")
+        else:
+            for item in self.profiles() or []:
+                if item["active"]:
+                    tool(self.nmcli, "connection", "down", "uuid", item["uuid"])
+        return None
+
+    def describe(self, item):
+        if item.get("header"):
+            sub = f"{item['count']} server{'s' if item['count'] != 1 else ''}" + (f"  ·  best {item['best']:.0f} ms" if item["best"] is not None else "")
+            if item["active"]:
+                sub = "Connected  ·  " + sub
+            caret = label(I["caret"], "dim", "vpn-caret")
+            set_class(caret, "open", item["open"])
+            return I["globe"], sub, [caret]
+        parts = []
+        if item["active"]:
+            parts.append("Connected")
+        ping = item.get("ping", self.pings.get(item["uuid"]))
+        if ping is not None:
+            parts.append(f"{ping:.0f} ms")
+        if item["auto"]:
+            parts.append("starts automatically")
+        right = [label(I["check"], "net-check")] if item["active"] else []
+        return ("" if item.get("child") else I["globe"]), "  ·  ".join(parts), right
+
+    def actions(self, item):
+        found = [("Disconnect", True, lambda: self.down(item))] if item["active"] else \
+                [("Connect", True, lambda: self.up(item))]
+        found.append(("Auto-start off" if item["auto"] else "Auto-start on", False, lambda: self.auto(item)))
+        return found
+
+    def up(self, item):
+        self.switch_error = ""
+        for other in self.items:                  # vždy jen jedna VPN najednou
+            if other["active"] and other["uuid"] != item["uuid"]:
+                tool(self.nmcli, "connection", "down", "uuid", other["uuid"])
+        ok, out, err = tool(self.nmcli, "-w", "20", "connection", "up", "uuid", item["uuid"], timeout=30)
+        self.ip_for = None
+        return None if ok else ((err or out).strip().splitlines() or ["Could not connect."])[-1].removeprefix("Error: ")
+
+    def down(self, item):
+        ok, out, err = tool(self.nmcli, "connection", "down", "uuid", item["uuid"])
+        self.ip_for = None
+        return None if ok else (err or out).strip().removeprefix("Error: ")
+
+    def auto(self, item):
+        """Automatický start po přihlášení; smí ho mít jen jeden profil."""
+        if not item["auto"]:
+            for other in self.items:
+                if other["auto"]:
+                    tool(self.nmcli, "connection", "modify", "uuid", other["uuid"], "connection.autoconnect", "no")
+        ok, out, err = tool(self.nmcli, "connection", "modify", "uuid", item["uuid"],
+                            "connection.autoconnect", "no" if item["auto"] else "yes")
+        return None if ok else (err or out).strip().removeprefix("Error: ")
+
+
 class BluetoothPage(ConnPage):
     key, title = "bluetooth", "Bluetooth"
     manager, manager_label = "blueman-manager", "Bluetooth manager…"
@@ -5105,7 +5443,8 @@ class Connections(AutoHide):
             GtkLayerShell.set_exclusive_zone(self.win, 0)          # pod lištou, ne přes ni
             GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.TOP, NET_TOP_MARGIN)
             GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.RIGHT, NET_RIGHT_MARGIN)
-            GtkLayerShell.set_keyboard_mode(self.win, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+            # klávesnice jen po kliknutí do okna (heslo k Wi-Fi), ostatní okna a lišta zůstávají použitelné
+            GtkLayerShell.set_keyboard_mode(self.win, GtkLayerShell.KeyboardMode.ON_DEMAND)
         self.watch_pointer()
         self.win.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.win.connect("key-press-event", self.on_key)
@@ -5116,7 +5455,7 @@ class Connections(AutoHide):
         self.win.add(root)
         head = hbox(4)
         self.pages, self.tabs = {}, {}
-        for page in (WifiPage(self), BluetoothPage(self)):
+        for page in (WifiPage(self), BluetoothPage(self), VpnPage(self)):
             self.pages[page.key] = page
             tab = self.button(label(page.title), "flat", "wall-chip")
             tab.connect("clicked", lambda _b, key=page.key: self.select(key))
@@ -5188,17 +5527,26 @@ class Connections(AutoHide):
         if page is not self.page():
             return
         self.switch.handler_block(self.switch_handler)
-        self.switch.set_sensitive(page.power is not None)
-        self.switch.set_state(bool(page.power))
+        self.switch.set_sensitive(page.power is not None and page.switching is None)
+        self.switch.set_state(bool(page.power) if page.switching is None else page.switching)
         self.switch.handler_unblock(self.switch_handler)
         self.scan_btn.set_sensitive(bool(page.power) and not page.scanning())
         set_class(self.scan_btn, "busy", page.scanning())     # probíhající hledání je vidět na tlačítku
 
     def on_switch(self, _switch, state):
         page = self.page()
-        self.switch.set_sensitive(False)
-        self.background(lambda: page.set_power(state), lambda _result: page.refresh(deep=state))
-        return False
+        page.switching, page.switch_error = state, ""
+        self.page_changed(page)
+        page.render()
+
+        def done(error):
+            # přepínač drží cílový stav, dokud nové načtení nepotvrdí skutečný stav (žádné poskakování)
+            page.switch_error = error if isinstance(error, str) else ""
+            page.settle = time.monotonic()
+            page.loading = False
+            page.refresh(deep=state)
+        self.background(lambda: page.set_power(state), done)
+        return True
 
     def on_key(self, _win, event):
         if event.keyval == Gdk.KEY_Escape:
@@ -5212,7 +5560,7 @@ class Connections(AutoHide):
 
     def tick(self):
         page = self.page()
-        if page.busy is None and not page.typing():
+        if page.busy is None and (page.switching is None or page.settle is not None) and not page.typing():
             page.refresh()
         page.render()
         return True
@@ -5225,7 +5573,9 @@ class Connections(AutoHide):
             return False
         if time.monotonic() - self.fitted < 0.8:
             return False      # kurzor neodjel, to se jen okno pod ním zmenšilo (ubyla položka apod.)
-        if not self.pointer_inside():
+        if page.switching is not None:
+            return False      # právě se zapíná / vypíná
+        if not self.hovering and not self.pointer_inside():
             self.hide()
         return False
 
@@ -5326,9 +5676,9 @@ class App(Gtk.Application):
         args = command_line.get_arguments()[1:]
         if "--quit" in args:
             self.quit()
-        elif "--wifi" in args or "--bluetooth" in args:
+        elif "--wifi" in args or "--bluetooth" in args or "--vpn" in args:
             if self.net:
-                self.net.toggle("wifi" if "--wifi" in args else "bluetooth")
+                self.net.toggle("wifi" if "--wifi" in args else "bluetooth" if "--bluetooth" in args else "vpn")
         elif "--wallpapers" in args:
             if self.picker:
                 self.picker.toggle()

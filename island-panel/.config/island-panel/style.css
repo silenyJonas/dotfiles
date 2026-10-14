@@ -946,3 +946,32 @@ switch.net-switch slider {
 switch.net-switch:checked slider {
   background: @pill_fg;
 }
+
+/* --- VPN --- */
+.vpn-card {
+  padding: 10px 12px;
+  margin-bottom: 2px;
+}
+
+.vpn-icon {
+  font-size: 22px;
+  min-width: 34px;
+  color: @fg_dim;
+}
+
+.vpn-icon.on {
+  color: @accent;
+}
+
+.vpn-child {
+  margin-left: 22px;
+}
+
+.vpn-caret {
+  transition: none;
+  padding: 0 4px;
+}
+
+.vpn-caret.open {
+  color: @accent;
+}

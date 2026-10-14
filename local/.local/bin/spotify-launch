@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Spouštění Spotify (Flatpak) se Spicetify, které se nezasekne:
+#  - smaže zaseknuté zámky "Singleton", když Spotify ve skutečnosti neběží
+#  - po aktualizaci Spotify znovu použije Spicetify (jinak Spotify hned po startu spadne)
+APP=com.spotify.Client
+DIR=/var/lib/flatpak/app/$APP/x86_64/stable/active/files/extra/share/spotify
+STATE=~/.cache/spotify-launch-commit
+
+# už běží -> jen ho ukázat
+if pgrep -f "/app/extra/share/spotify/spotify" >/dev/null || pgrep -x spotify >/dev/null; then
+  exec flatpak run $APP "$@"
+fi
+
+# zaseknuté zámky po pádu
+find ~/.var/app/$APP -name 'Singleton*' -delete 2>/dev/null
+
+# aktualizoval se Spotify? (podle commitu Flatpaku)
+commit=$(flatpak info --show-commit $APP 2>/dev/null)
+if [ -n "$commit" ] && [ "$commit" != "$(cat "$STATE" 2>/dev/null)" ] && command -v spicetify >/dev/null; then
+  if [ -w "$DIR" ] && [ -w "$DIR/Apps" ]; then
+    spicetify restore backup apply >/dev/null 2>&1 || spicetify backup apply >/dev/null 2>&1
+  else
+    # nová verze má zase práva jen pro roota -> otevřít terminál, kde se zadá heslo
+    kitty --title "Spotify update" sh -c "echo 'Spotify se aktualizoval, obnovuji Spicetify (zadej heslo):'; \
+      sudo chmod a+wr '$DIR' && sudo chmod a+wr -R '$DIR/Apps' && spicetify restore backup apply; \
+      echo; echo 'Hotovo, okno se zavře za 3 s.'; sleep 3"
+  fi
+  echo "$commit" > "$STATE"
+fi
+
+exec flatpak run $APP "$@"
