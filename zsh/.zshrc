@@ -99,3 +99,4 @@ spotify() {
 }
 
 export PATH=$PATH:/home/joncl/.spicetify
+alias spotify='~/.local/bin/spotify-launch'
