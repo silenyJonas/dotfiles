@@ -108,3 +108,16 @@ for _app in kwrite kate dolphin okular gwenview ark brave-browser codium nautilu
   command -v $_app >/dev/null && alias $_app="detach $_app"
 done
 unset _app
+
+# --- island: yazi
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
+y() {
+  local tmp="$(mktemp -t yazi-cwd.XXXXXX)" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then builtin cd -- "$cwd"; fi
+  rm -f -- "$tmp"
+}
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+
+# --- island: ys = yazi jako správce (root) se stejným vzhledem; POZOR, smí smazat i systémové soubory
+ys() { sudo YAZI_CONFIG_HOME="$HOME/.config/yazi" "$(command -v yazi)" "$@"; }

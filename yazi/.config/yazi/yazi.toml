@@ -1,0 +1,12 @@
+# Yazi – správce souborů v konzoli (Island)
+[mgr]
+ratio = [1, 3, 4]          # šířka sloupců: nadřazená složka, aktuální, náhled
+sort_by = "natural"        # soubor2 před soubor10
+sort_dir_first = true
+show_hidden = false        # skryté soubory přepneš klávesou .
+show_symlink = true
+linemode = "size"          # vpravo u souborů velikost
+
+[preview]
+max_width = 1200
+max_height = 1800
