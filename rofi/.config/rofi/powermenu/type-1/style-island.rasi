@@ -32,7 +32,7 @@ mainbox {
     spacing:          8px;
     padding:          12px;
     background-color: transparent;
-    children:         [ "inputbar", "message", "listview" ];
+    children:         [ "message", "listview" ];
 }
 
 /* --- Hlavička: světlá pilulka s ikonou + název počítače --- */

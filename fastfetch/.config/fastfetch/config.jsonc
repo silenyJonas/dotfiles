@@ -1,131 +1,176 @@
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
     "logo": {
-        "source": "~/.config/fastfetch/custom_logo.txt", 
+        "source": "~/.config/fastfetch/custom_logo.txt",
         "type": "file",
-        // "logoColor": "37",
-        "color": {"1": "white"},
-        "height": 20,
+        "color": {
+            "1": "38;2;125;190;220"
+        },
         "padding": {
-            "top": 1
+            "top": 2,
+            "left": 2,
+            "right": 4
         }
     },
     "display": {
-          "separator": " ➜  "
+        "separator": "  ",
+        "color": {
+            "keys": "38;2;125;190;220",
+            "output": "38;2;219;231;238",
+            "separator": "38;2;127;151;165"
+        },
+        "percent": {
+            "type": 3,
+            "color": {
+                "green": "38;2;163;190;140",
+                "yellow": "38;2;235;203;139",
+                "red": "38;2;191;97;106"
+            }
+        },
+        "bar": {
+            "char": {
+                "elapsed": "━",
+                "total": "─"
+            },
+            "border": {
+                "left": "",
+                "right": " "
+            },
+            "width": 12,
+            "color": {
+                "elapsed": "38;2;125;190;220",
+                "total": "38;2;43;70;86"
+            }
+        },
+        "size": {
+            "binaryPrefix": "jedec"
+        }
     },
     "modules": [
         "break",
-        "break",
-        "break",
-         {
+        {
+            "type": "custom",
+            "format": "\u001b[38;2;125;190;220;1m  System\u001b[0m"
+        },
+        {
             "type": "os",
-            "key": "OS   ",
-            "keyColor": "34",      // AKCENT 1: Modrá (34)
-            "color": "37"           // Výpis: Světle šedá/Bílá (37)
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{2} {9}"
         },
         {
             "type": "kernel",
-            "key": " ├  ",
-            "keyColor": "34",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{2}"
         },
         {
             "type": "packages",
-            "format": "{} (pacman)",
-            "key": " ├ 󰏖 ",
-            "keyColor": "34",  
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         {
             "type": "shell",
-            "key": " └  ",
-            "keyColor": "34", 
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
+        },
+        {
+            "type": "uptime",
+            "key": "\u001b[38;2;43;70;86m ╰─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         "break",
         {
+            "type": "custom",
+            "format": "\u001b[38;2;125;190;220;1m  Desktop\u001b[0m"
+        },
+        {
             "type": "wm",
-            "key": "WM   ",
-            "keyColor": "36",      // AKCENT 2: Azurová/Cyan (36)
-            "color": "37"
-        },
-        {
-            "type": "wmtheme",
-            "key": " ├ 󰉼 ",
-            "keyColor": "36",
-            "color": "37"
-        },
-        {
-            "type": "icons",
-            "key": " ├ 󰀻 ",
-            "keyColor": "36",
-            "color": "37"
-        },
-        {
-            "type": "cursor",
-            "key": " ├  ",
-            "keyColor": "36", 
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         {
             "type": "terminal",
-            "key": " ├  ",
-            "keyColor": "36",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         {
             "type": "terminalfont",
-            "key": " └  ",
-            "keyColor": "36", 
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
+        },
+        {
+            "type": "theme",
+            "key": "\u001b[38;2;43;70;86m ╰─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         "break",
         {
+            "type": "custom",
+            "format": "\u001b[38;2;125;190;220;1m  Hardware\u001b[0m"
+        },
+        {
             "type": "host",
-            "format": "{5} {1} Type {2}",
-            "key": "PC   ",
-            "keyColor": "37",      // AKCENT 3: Bílá/Šedá (37)
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{2}"
         },
         {
             "type": "cpu",
-            "format": "{1} ({3}) @ {7} GHz",
-            "key": " ├  ",
-            "keyColor": "37",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{1} ({3})"
         },
         {
             "type": "gpu",
-            "format": "{1} {2} @ {12} GHz",            
-            "key": " ├ 󰢮 ",
-            "keyColor": "37",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{2}"
         },
         {
             "type": "memory",
-            "key": " ├  ",
-            "keyColor": "37",
-            "color": "37"
-        },
-        {
-            "type": "swap",
-            "key": " ├ 󰓡 ",
-            "keyColor": "37",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
         },
         {
             "type": "disk",
-            "key": " ├ 󰋊 ",
-            "keyColor": "37",
-            "color": "37"
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "folders": "/",
+            "format": "{1} / {2} ({3})"
         },
         {
-            "type": "monitor",
-            "key": " └  ",
-            "keyColor": "37",
-            "color": "37"
+            "type": "battery",
+            "key": "\u001b[38;2;43;70;86m ├─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238"
+        },
+        {
+            "type": "display",
+            "key": "\u001b[38;2;43;70;86m ╰─\u001b[38;2;125;190;220m  ",
+            "keyColor": "38;2;125;190;220",
+            "outputColor": "38;2;219;231;238",
+            "format": "{1}x{2} @ {3} Hz"
         },
         "break",
-        "break",
+        {
+            "type": "colors",
+            "symbol": "circle",
+            "paddingLeft": 3
+        }
     ]
 }
