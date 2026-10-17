@@ -13,6 +13,7 @@
   "modules-left": [
     "cpu",
     "memory",
+    "custom/gpu",
     "temperature",
     "battery"
   ],
@@ -47,6 +48,12 @@
     "format": "{usage}% CPU",
     "tooltip": true,
     "tooltip-format": "CPU usage: {usage}%\nCores: {cores}",
+    "on-click": "gnome-system-monitor"
+  },
+  "custom/gpu": {
+    "exec": "python3 ~/.config/waybar/scripts/gpu.py",
+    "return-type": "json",
+    "tooltip": true,
     "on-click": "gnome-system-monitor"
   },
   "memory": {

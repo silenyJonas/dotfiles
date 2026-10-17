@@ -31,6 +31,7 @@ Ovládání:   python3 panel.py --toggle   (otevřít / zavřít, třeba z kláv
 Vzhled se upravuje v souboru style.css vedle tohoto skriptu, změny se načtou samy.
 """
 
+import base64
 import calendar
 import colorsys
 import datetime
@@ -41,11 +42,13 @@ import json
 import math
 import os
 import random
+import secrets
 import re
 import shlex
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import threading
@@ -123,6 +126,7 @@ NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --blueto
 NET_WIDTH = 340              # šířka okna
 NET_TOP_MARGIN = 6           # mezera pod lištou
 NET_RIGHT_MARGIN = 8         # odsazení od pravého okraje obrazovky
+BAR_ZONE = 48                # výška lišty nahoře; dokud je kurzor v ní, okno Wi-Fi zůstane otevřené
 NET_LIST_HEIGHT = 420        # největší výška seznamu, pak se posouvá
 BT_SCAN_SECONDS = 10         # jak dlouho se po otevření hledají nová Bluetooth zařízení
 
@@ -169,7 +173,7 @@ I = {
     "star": "\uf005", "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
     "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
     "gpu": "\uf26c", "updown": "\uf0ec", "bolt": "\uf0e7", "caret": "\uf0d7",
-    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db", "shield": "\uf132", "globe": "\uf0ac",
+    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db", "rec": "\uf111", "stop": "\uf04d", "shield": "\uf132", "globe": "\uf0ac",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
@@ -290,6 +294,17 @@ class Stats:
         total, avail = info.get("MemTotal", 0), info.get("MemAvailable", 0)
         used = total - avail
         return used / 1048576, total / 1048576, (100.0 * used / total if total else 0.0)
+
+    @staticmethod
+    def cache():
+        """Mezipaměť souborů, kterou jde uvolnit (bez tmpfs a sdílené paměti), v bajtech."""
+        info = {}
+        for line in read("/proc/meminfo").splitlines():
+            key, _, rest = line.partition(":")
+            if key in ("Buffers", "Cached", "SReclaimable", "Shmem"):
+                info[key] = int(rest.split()[0]) * 1024
+        return max(0, info.get("Buffers", 0) + info.get("Cached", 0) + info.get("SReclaimable", 0)
+                   - info.get("Shmem", 0))
 
     @staticmethod
     def disk():
@@ -937,15 +952,22 @@ class BatteryCard(Gtk.DrawingArea):
             self.text(cr, "Battery", 13, 14, 42, fg)
             self.text(cr, "no battery", 11, 14, h - 14, fg, 0.6, bottom=True)
             return False
-        on_fill = lambda y: dark if y > fill_top else fg      # barva textu podle toho, jestli je na výplni
         icon = I["bat"][min(4, self.capacity // 20)]
-        self.text(cr, icon, 18, 14, 14, on_fill(24), 0.85)
-        self.text(cr, "Battery", 13, 14, 42, on_fill(50))
         status = {"Not charging": "Plugged in"}.get(self.status, self.status or "")
-        self.text(cr, status, 11, w - 12, h - 46, on_fill(h - 50), 0.75, right=True, bottom=True)
         charging = self.status in ("Charging", "Full", "Not charging")
-        self.text(cr, (I["bolt"] + " " if charging else "") + f"{self.capacity}%", 24, w - 12, h - 12,
-                  on_fill(h - 20), 1.0, bold=True, right=True, bottom=True)
+        # text se kreslí dvakrát: nad výplní světle, na výplni tmavě (i když hrana výplně jde přes písmeno)
+        for top, bottom, color in ((0, fill_top, fg), (fill_top, h, dark)):
+            if bottom <= top:
+                continue
+            cr.save()
+            cr.rectangle(0, top, w, bottom - top)
+            cr.clip()
+            self.text(cr, icon, 18, 14, 14, color, 0.85)
+            self.text(cr, "Battery", 13, 14, 42, color)
+            self.text(cr, status, 11, w - 12, h - 46, color, 0.75, right=True, bottom=True)
+            self.text(cr, (I["bolt"] + " " if charging else "") + f"{self.capacity}%", 24, w - 12, h - 12,
+                      color, 1.0, bold=True, right=True, bottom=True)
+            cr.restore()
         return False
 
 
@@ -1380,6 +1402,69 @@ def screen_locked():
     return _locked_cache[1]
 
 
+def hypr_socket(name):
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    run_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    return os.path.join(run_dir, "hypr", sig, name) if sig else None
+
+
+def hypr_json(what):
+    """Rychlý dotaz na Hyprland přímo přes jeho socket (bez spouštění hyprctl)."""
+    path = hypr_socket(".socket.sock")
+    if not path:
+        return None
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.3)
+            sock.connect(path)
+            sock.sendall(f"j/{what}".encode())
+            data = b""
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                data += chunk
+        return json.loads(data)
+    except (OSError, ValueError):
+        return None
+
+
+class HyprEvents:
+    """Poslouchá události Hyprlandu (změna aktivního okna, plochy…) a předává je posluchačům."""
+
+    def __init__(self):
+        self.listeners = []
+        if hypr_socket(".socket2.sock"):
+            threading.Thread(target=self.run, daemon=True).start()
+
+    def connect(self, callback):
+        self.listeners.append(callback)
+
+    def emit(self, name, data):
+        for callback in self.listeners:
+            callback(name, data)
+        return False
+
+    def run(self):
+        while True:
+            try:
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                    sock.connect(hypr_socket(".socket2.sock"))
+                    buf = b""
+                    while True:
+                        chunk = sock.recv(4096)
+                        if not chunk:
+                            break
+                        buf += chunk
+                        *lines, buf = buf.split(b"\n")
+                        for line in lines:
+                            name, _, data = line.decode(errors="ignore").partition(">>")
+                            GLib.idle_add(self.emit, name, data)
+            except OSError:
+                pass
+            time.sleep(2)
+
+
 class AutoHide:
     """Společné chování vysouvacích panelů: po odjetí kurzoru se panel schová.
 
@@ -1797,9 +1882,54 @@ class Panel(AutoHide):
         grid.pack_start(bottom, True, True, 0)
         page.pack_start(grid, True, True, 0)
 
+        side = vbox(8)
         self.p_battery = BatteryCard()
-        page.pack_start(self.p_battery, False, False, 0)
+        side.pack_start(self.p_battery, True, True, 0)
+        cache = vbox(4, "tile", "perf-card", "cache-card")
+        cache.pack_start(label("Cache", "dim", "small"), False, False, 0)
+        self.p_cache = label("", "cache-value")
+        cache.pack_start(self.p_cache, False, False, 0)
+        self.p_cache_btn = css(Gtk.Button(label="Clear"), "flat", "cache-btn")
+        self.p_cache_btn.set_can_focus(False)
+        self.p_cache_btn.set_tooltip_text("Free the file cache (it fills up again as files are read)")
+        self.p_cache_btn.connect("clicked", lambda *_: self.drop_cache())
+        cache.pack_start(self.p_cache_btn, False, False, 0)
+        self.cache_busy = False
+        side.pack_start(cache, False, False, 0)
+        page.pack_start(side, False, False, 0)
         return page
+
+    def drop_cache(self):
+        """Uvolní mezipaměť přes pomocníka s právy roota (/usr/local/bin/island-drop-caches)."""
+        if self.cache_busy:
+            return
+        self.cache_busy = True
+        before = self.stats.cache()
+        self.p_cache_btn.set_label("Clearing…")
+        self.p_cache_btn.set_sensitive(False)
+
+        def work():
+            helper = "/usr/local/bin/island-drop-caches"
+            ok = subprocess.run(["sudo", "-n", helper], capture_output=True).returncode == 0 \
+                if os.path.exists(helper) else False
+            if not ok and shutil.which("pkexec"):            # bez pravidla v sudoers zeptá se na heslo
+                ok = subprocess.run(["pkexec", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches"],
+                                    capture_output=True).returncode == 0
+            GLib.idle_add(done, ok)
+
+        def done(ok):
+            freed = max(0, before - self.stats.cache())
+            self.p_cache_btn.set_label(f"−{human_bytes(freed)}" if ok else "Failed")
+            self.p_cache.set_text(human_bytes(self.stats.cache()))
+
+            def reset():
+                self.cache_busy = False
+                self.p_cache_btn.set_label("Clear")
+                self.p_cache_btn.set_sensitive(True)
+                return False
+            GLib.timeout_add(2000, reset)
+            return False
+        threading.Thread(target=work, daemon=True).start()
 
     def perf_card(self, parent, icon, title, subtitle):
         card = hbox(10, "tile", "perf-card")
@@ -2208,6 +2338,8 @@ class Panel(AutoHide):
         used, total, pct = self.stats.ram()
         self.p_ram.set(pct)
         self.p_ram_detail.set_text(f"{used:.1f} / {total:.1f} GB")
+        if not self.cache_busy:
+            self.p_cache.set_text(human_bytes(self.stats.cache()))
 
     def refresh_media(self):
         info, others = self.mpris.poll()
@@ -3062,6 +3194,135 @@ class Toasts:
 
 
 # ----------------------------------------------------------------------------
+# OBS: stav nahrávání přes vestavěný WebSocket (obs-websocket 5)
+# ----------------------------------------------------------------------------
+OBS_HOST, OBS_PORT = "127.0.0.1", 4455
+OBS_PASS_FILE = os.path.expanduser("~/.config/obs-rec/password")
+
+
+class WS:
+    def __init__(self, host, port, timeout=2):
+        self.sock = socket.create_connection((host, port), timeout=timeout)
+        key = base64.b64encode(secrets.token_bytes(16)).decode()
+        self.sock.sendall((f"GET / HTTP/1.1\r\nHost: {host}:{port}\r\nUpgrade: websocket\r\n"
+                           f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\n"
+                           f"Sec-WebSocket-Protocol: obswebsocket.json\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        head = b""
+        while b"\r\n\r\n" not in head:
+            chunk = self.sock.recv(1024)
+            if not chunk:
+                raise ConnectionError("closed during handshake")
+            head += chunk
+        if b" 101 " not in head.split(b"\r\n", 1)[0]:
+            raise ConnectionError("handshake refused")
+        self.buf = head.split(b"\r\n\r\n", 1)[1]
+
+    def _read(self, n):
+        while len(self.buf) < n:
+            chunk = self.sock.recv(65536)
+            if not chunk:
+                raise ConnectionError("closed")
+            self.buf += chunk
+        data, self.buf = self.buf[:n], self.buf[n:]
+        return data
+
+    def send(self, obj):
+        data = json.dumps(obj).encode()
+        head = bytes([0x81])
+        n = len(data)
+        if n < 126:
+            head += bytes([0x80 | n])
+        elif n < 65536:
+            head += bytes([0x80 | 126]) + struct.pack(">H", n)
+        else:
+            head += bytes([0x80 | 127]) + struct.pack(">Q", n)
+        mask = secrets.token_bytes(4)
+        self.sock.sendall(head + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
+
+    def recv(self):
+        while True:
+            b1, b2 = self._read(2)
+            n = b2 & 0x7F
+            if n == 126:
+                n = struct.unpack(">H", self._read(2))[0]
+            elif n == 127:
+                n = struct.unpack(">Q", self._read(8))[0]
+            if b2 & 0x80:
+                mask = self._read(4)
+                payload = bytes(b ^ mask[i % 4] for i, b in enumerate(self._read(n)))
+            else:
+                payload = self._read(n)
+            op = b1 & 0x0F
+            if op == 8:
+                raise ConnectionError("closed by server")
+            if op == 9:                                    # ping -> pong
+                self.sock.sendall(bytes([0x8A, 0x80]) + secrets.token_bytes(4))
+                continue
+            if op in (1, 2):
+                return json.loads(payload)
+
+    def close(self):
+        try:
+            self.sock.sendall(bytes([0x88, 0x80]) + secrets.token_bytes(4))   # slušné ukončení
+            self.sock.close()
+        except OSError:
+            pass
+
+
+class ObsClient:
+    def __init__(self):
+        self.ws = WS(OBS_HOST, OBS_PORT)
+        hello = self.ws.recv()["d"]
+        ident = {"rpcVersion": 1, "eventSubscriptions": 0}
+        auth = hello.get("authentication")
+        if auth:
+            password = open(OBS_PASS_FILE).read().strip() if os.path.exists(OBS_PASS_FILE) else ""
+            secret = base64.b64encode(hashlib.sha256((password + auth["salt"]).encode()).digest()).decode()
+            ident["authentication"] = base64.b64encode(
+                hashlib.sha256((secret + auth["challenge"]).encode()).digest()).decode()
+        self.ws.send({"op": 1, "d": ident})
+        reply = self.ws.recv()
+        if reply.get("op") != 2:
+            raise PermissionError("wrong password")
+        self.counter = 0
+
+    def request(self, kind):
+        self.counter += 1
+        rid = str(self.counter)
+        self.ws.send({"op": 6, "d": {"requestType": kind, "requestId": rid}})
+        while True:
+            msg = self.ws.recv()
+            if msg.get("op") == 7 and msg["d"].get("requestId") == rid:
+                return msg["d"].get("responseData") or {}
+
+
+
+class ObsRecorder:
+    """Drží spojení s OBS; status() vrací None (OBS neběží / nenahrává) nebo (pauza?, milisekundy)."""
+
+    def __init__(self):
+        self.client, self.lock = None, threading.Lock()
+
+    def call(self, kind):
+        with self.lock:
+            try:
+                if self.client is None:
+                    self.client = ObsClient()
+                return self.client.request(kind)
+            except (OSError, ConnectionError, ValueError, KeyError, PermissionError):
+                if self.client is not None:
+                    self.client.ws.close()
+                self.client = None
+                return None
+
+    def status(self):
+        st = self.call("GetRecordStatus")
+        if not st or not st.get("outputActive"):
+            return None
+        return bool(st.get("outputPaused")), int(st.get("outputDuration", 0))
+
+
+# ----------------------------------------------------------------------------
 # Ovládací centrum u pravého okraje
 # ----------------------------------------------------------------------------
 class ControlCenter(AutoHide):
@@ -3183,6 +3444,39 @@ class ControlCenter(AutoHide):
     # ------------------------------------------------------------ oznámení
     def build_notifications(self):
         section = vbox(8)
+        # nahrávání OBS: vždy úplně nahoře, jen když se nahrává
+        self.obs = ObsRecorder()
+        self.rec_busy, self.rec_timer = False, None
+        self.rec_stopping = 0            # čas kliknutí na stop (0 = nezastavuje se)
+        rec = self.rec_card = hbox(10, "tile", "rec-card")
+        self.rec_dot = label(I["rec"], "rec-dot")
+        rec.pack_start(self.rec_dot, False, False, 0)
+        self.rec_spin = Gtk.Spinner()
+        self.rec_spin.get_style_context().add_class("rec-spin")
+        self.rec_spin.set_valign(Gtk.Align.CENTER)
+        rec.pack_start(self.rec_spin, False, False, 0)
+        text = vbox(0)
+        text.set_valign(Gtk.Align.CENTER)
+        self.rec_title = label("Recording", "rec-title", xalign=0)
+        self.rec_time = label("00:00", "rec-time", xalign=0)
+        text.pack_start(self.rec_title, False, False, 0)
+        text.pack_start(self.rec_time, False, False, 0)
+        rec.pack_start(text, True, True, 0)
+        self.rec_pause = css(Gtk.Button(label=I["pause"]), "flat", "rec-btn")
+        self.rec_pause.connect("clicked", lambda *_: self.obs_action("ToggleRecordPause"))
+        stop = css(Gtk.Button(label=I["stop"]), "flat", "rec-btn", "rec-stop")
+        stop.connect("clicked", lambda *_: self.stop_recording())
+        self.rec_stop = stop
+        for b in (self.rec_pause, stop):
+            b.set_valign(Gtk.Align.CENTER)
+            b.set_can_focus(False)
+            rec.pack_start(b, False, False, 0)
+        rec.show_all()
+        self.rec_spin.hide()
+        self.rec_spin.set_no_show_all(True)
+        rec.set_no_show_all(True)
+        rec.hide()
+        section.pack_start(rec, False, False, 0)
         head = hbox(8)
         self.n_title = label("Notifications", "section-title", xalign=0)
         head.pack_start(self.n_title, True, True, 0)
@@ -3197,6 +3491,91 @@ class ControlCenter(AutoHide):
         scroll.add(self.n_list)
         section.pack_start(scroll, True, True, 0)
         return section
+
+    def poll_recording(self):
+        """Každou sekundu, jen když je centrum otevřené; dotaz běží na pozadí."""
+        if not self.visible:
+            self.rec_timer = None
+            return False
+        if not self.rec_busy:
+            self.rec_busy = True
+
+            def work():
+                result = self.obs.status()
+                GLib.idle_add(done, result)
+
+            def done(result):
+                self.rec_busy = False
+                if self.rec_stopping:
+                    if result is None:
+                        self.rec_finished()
+                    elif time.monotonic() - self.rec_stopping > 20:
+                        self.rec_set_stopping(False)      # OBS nezastavilo, vrátit normální stav
+                    return False
+                if getattr(self, "rec_saved", False):
+                    return False
+                if result is None:
+                    self.rec_card.hide()
+                else:
+                    paused, ms = result
+                    sec = ms // 1000
+                    self.rec_time.set_text(f"{sec // 3600}:{sec // 60 % 60:02d}:{sec % 60:02d}" if sec >= 3600
+                                           else f"{sec // 60:02d}:{sec % 60:02d}")
+                    self.rec_title.set_text("Recording paused" if paused else "Recording")
+                    self.rec_pause.set_label(I["rec"] if paused else I["pause"])
+                    set_class(self.rec_card, "paused", paused)
+                    self.rec_card.show()
+                return False
+            threading.Thread(target=work, daemon=True).start()
+        return True
+
+    def rec_set_stopping(self, on):
+        self.rec_stopping = time.monotonic() if on else 0
+        self.rec_dot.set_visible(not on)
+        self.rec_spin.set_visible(on)
+        (self.rec_spin.start if on else self.rec_spin.stop)()
+        self.rec_pause.set_sensitive(not on)
+        self.rec_stop.set_sensitive(not on)
+        set_class(self.rec_card, "stopping", on)
+        if on:
+            set_class(self.rec_card, "paused", False)
+            self.rec_title.set_text("Stopping…")
+            self.rec_time.set_text("Saving the recording")
+
+    def stop_recording(self):
+        if self.rec_stopping:
+            return
+        self.rec_set_stopping(True)
+        self.obs_action("StopRecord")
+
+    def rec_finished(self):
+        """Nahrávání skončilo: chvíli ukázat "Saved", pak kartu schovat."""
+        self.rec_set_stopping(False)
+        self.rec_title.set_text("Recording saved")
+        self.rec_time.hide()
+        self.rec_dot.set_text(I["check"])
+        self.rec_pause.hide()
+        self.rec_stop.hide()
+        set_class(self.rec_card, "saved", True)
+        self.rec_saved = True
+
+        def reset():
+            self.rec_card.hide()
+            self.rec_dot.set_text(I["rec"])
+            self.rec_time.set_text("00:00")
+            self.rec_time.show()
+            self.rec_pause.show()
+            self.rec_stop.show()
+            set_class(self.rec_card, "saved", False)
+            self.rec_saved = False
+            return False
+        GLib.timeout_add(1800, reset)
+
+    def obs_action(self, kind):
+        def work():
+            self.obs.call(kind)
+            GLib.timeout_add(300, lambda: self.poll_recording() and False)
+        threading.Thread(target=work, daemon=True).start()
 
     def on_notifications_changed(self):
         if self.visible:
@@ -3460,6 +3839,9 @@ class ControlCenter(AutoHide):
         self.win.show()
         if self.tick_timer is None:
             self.tick_timer = GLib.timeout_add_seconds(2, self.tick)
+        if self.rec_timer is None:
+            self.poll_recording()
+            self.rec_timer = GLib.timeout_add(1000, self.poll_recording)
         if not by_key:
             self.close_unless_entered()
 
@@ -5739,6 +6121,8 @@ class Connections(AutoHide):
         self.watch_pointer()
         self.win.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.win.connect("key-press-event", self.on_key)
+        self.shown_at, self.away_timer = 0.0, None
+        app.hypr_events.connect(self.on_hypr_event)
 
         root = vbox(10)
         root.set_name("net")
@@ -5881,7 +6265,10 @@ class Connections(AutoHide):
         if self.visible:
             return
         self.visible = True
+        self.shown_at = time.monotonic()
         self.win.show()
+        if self.away_timer is None:
+            self.away_timer = GLib.timeout_add(250, self.check_away)
         self.page().refresh(deep=True)
         for other in self.pages.values():       # ostatní záložky načíst předem, ať se při přepnutí neskáče
             if other is not self.page():
@@ -5897,11 +6284,43 @@ class Connections(AutoHide):
         if self.tick_timer is not None:
             GLib.source_remove(self.tick_timer)
             self.tick_timer = None
+        if self.away_timer is not None:
+            GLib.source_remove(self.away_timer)
+            self.away_timer = None
         self.win.hide()
         for page in self.pages.values():
             if page.busy is None:
                 page.collapse()
                 page.render()
+
+    def on_hypr_event(self, name, data):
+        """Kliknutí na jiné okno nebo přepnutí plochy okno zavře (i během psaní hesla)."""
+        if not self.visible or time.monotonic() - self.shown_at < 0.4:
+            return
+        if name == "activewindowv2" and data.strip(", ") or name in ("workspace", "focusedmon"):
+            self.hide()
+
+    def check_away(self):
+        """Kurzor odjel z lišty i z okna (třeba na jiné okno), aniž by do okna vůbec vjel -> zavřít."""
+        if not self.visible:
+            self.away_timer = None
+            return False
+        if self.hovering or self.pointer_inside() or self.close_timer is not None:
+            return True
+        pos, monitors = hypr_json("cursorpos"), hypr_json("monitors")
+        if not pos or not monitors:
+            return True
+        x, y = pos.get("x", 0), pos.get("y", 0)
+        for m in monitors:
+            scale = m.get("scale") or 1
+            w, h = m["width"] / scale, m["height"] / scale
+            if m.get("transform", 0) % 2:
+                w, h = h, w
+            if m["x"] <= x < m["x"] + w and m["y"] <= y < m["y"] + h:
+                if y - m["y"] > BAR_ZONE:             # pod lištou a mimo okno
+                    self.close_if_outside()
+                break
+        return True
 
     def toggle(self, key):
         if self.visible and self.current == key:
@@ -5916,7 +6335,7 @@ class App(Gtk.Application):
                          flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.panel = self.trigger = self.side = self.center = self.edge = self.css_monitor = None
         self.server = self.toasts = self.icons = None
-        self.walls = self.picker = self.net = None
+        self.walls = self.picker = self.net = self.hypr_events = None
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -5948,6 +6367,7 @@ class App(Gtk.Application):
         if self.side or self.center:
             self.edge = RightEdge(self, self.side, self.center)
         if NET_ENABLED:
+            self.hypr_events = HyprEvents()
             self.net = Connections(self)
         if WALL_ENABLED:
             self.walls = Wallpapers()

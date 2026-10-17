@@ -1012,3 +1012,117 @@ button.power-mode.on label {
 button.power-mode:disabled {
   opacity: 0.7;
 }
+
+/* --- nahrávání OBS (nahoře v ovládacím centru) --- */
+.rec-card {
+  padding: 10px 12px;
+  background: alpha(@bad, 0.16);
+  border: 1px solid alpha(@bad, 0.35);
+}
+
+.rec-card.paused {
+  background: alpha(#ebcb8b, 0.12);
+  border-color: alpha(#ebcb8b, 0.35);
+}
+
+.rec-dot {
+  color: @bad;
+  font-size: 14px;
+  min-width: 22px;
+}
+
+.rec-card.paused .rec-dot {
+  color: #ebcb8b;
+}
+
+.rec-title {
+  font-weight: bold;
+}
+
+.rec-time {
+  color: @fg_dim;
+  font-size: 12px;
+}
+
+button.rec-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+  background: @hover;
+}
+
+button.rec-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.rec-btn.rec-stop {
+  background: @pill;
+}
+
+button.rec-btn.rec-stop label {
+  color: @bad;
+}
+
+.rec-card.stopping {
+  background: alpha(@fg, 0.06);
+  border-color: alpha(@fg, 0.18);
+}
+
+.rec-card.saved {
+  background: alpha(#a3be8c, 0.14);
+  border-color: alpha(#a3be8c, 0.35);
+}
+
+.rec-card.saved .rec-dot {
+  color: #a3be8c;
+}
+
+.rec-spin {
+  color: @fg;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 0 3px;
+}
+
+button.rec-btn:disabled {
+  opacity: 0.4;
+}
+
+.cache-card {
+  padding: 10px 8px;
+}
+
+.cache-card label {
+  font-size: 12px;
+}
+
+label.cache-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button.cache-btn {
+  margin-top: 2px;
+  min-height: 26px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: @pill;
+}
+
+button.cache-btn label {
+  color: @pill_fg;
+  font-weight: bold;
+}
+
+button.cache-btn:hover {
+  background: alpha(@pill, 0.85);
+}
+
+button.cache-btn:disabled {
+  background: @hover;
+}
+
+button.cache-btn:disabled label {
+  color: @fg;
+}

@@ -64,6 +64,7 @@ window#waybar.hidden {
 #clock,
 #cpu,
 #memory,
+#custom-gpu,
 #temperature,
 #backlight,
 #pulseaudio,
@@ -161,6 +162,7 @@ window#waybar.hidden {
 #clock:hover,
 #cpu:hover,
 #memory:hover,
+#custom-gpu:hover,
 #pulseaudio:hover,
 #network:hover,
 #custom-brave:hover,
@@ -217,3 +219,4 @@ tooltip label {
 #custom-vpn.on {
   color: #7dbedc;
 }
+
