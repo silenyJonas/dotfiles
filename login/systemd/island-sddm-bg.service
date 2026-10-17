@@ -1,0 +1,6 @@
+[Unit]
+Description=Pozadí přihlašovací obrazovky podle tapety
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/island-sddm-bg

@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=Island
+Description=Island login screen: clock first, then account, password and session
+Author=silenyJonas
+Type=sddm-theme
+Version=2.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=island
+Theme-API=2.0
+QtVersion=6

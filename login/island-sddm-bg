@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Pozadí přihlašovací obrazovky = aktuální tapeta z plochy.
+
+Spouští se samo, když přepínač tapet v Island panelu změní tapetu (systemd: island-sddm-bg.path).
+Zapisuje do /usr/share/sddm/themes/island/background.jpg (soubor patří tobě, SDDM ho jen čte).
+Video tapety: použije se jeden snímek (potřebuje ffmpeg), jinak zůstane předchozí pozadí.
+"""
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+STATE = os.path.expanduser("~/.local/state/island-panel/wallpaper")
+OUT = "/usr/share/sddm/themes/island/background.jpg"
+BLUR = "/usr/share/sddm/themes/island/background-blur.jpg"   # rozmazaná verze pro přihlášení
+VIDEO = (".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi")
+MAX_W = 3840
+
+
+def current():
+    try:
+        path = os.path.expanduser(open(STATE).read().strip())
+    except OSError:
+        path = ""
+    if path and os.path.isfile(path):
+        return path
+    folder = os.path.expanduser("~/Pictures/wallpapers")
+    for root, _dirs, files in os.walk(folder):
+        for name in sorted(files):
+            if name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                return os.path.join(root, name)
+    return None
+
+
+def to_jpeg(src, dst):
+    """Libovolný obrázek -> JPEG (nejvýš 3840 px na šířku)."""
+    try:
+        import gi
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf
+        pix = GdkPixbuf.Pixbuf.new_from_file(src)
+        if pix.get_width() > MAX_W:
+            pix = pix.scale_simple(MAX_W, round(pix.get_height() * MAX_W / pix.get_width()),
+                                   GdkPixbuf.InterpType.HYPER)
+        if pix.get_has_alpha():
+            pix = pix.composite_color_simple(pix.get_width(), pix.get_height(), GdkPixbuf.InterpType.NEAREST,
+                                             255, 32, 0x0a1e2c, 0x0a1e2c)
+        pix.savev(dst, "jpeg", ["quality"], ["92"])
+        return True
+    except Exception as err:
+        print(f"island-sddm-bg: {src}: {err}", file=sys.stderr)
+        if src.lower().endswith((".jpg", ".jpeg")):
+            shutil.copyfile(src, dst)
+            return True
+        return False
+
+
+def box_blur(data, w, h, radius, passes=3):
+    """Rozmazání malého obrázku (RGB bajty) opakovaným průměrem okolí, výsledek je jako gaussovské."""
+    px = [list(data[i::3]) for i in range(3)]
+    for _ in range(passes):
+        for ch in px:
+            for y in range(h):                       # vodorovně
+                row = ch[y * w:(y + 1) * w]
+                acc = row[0] * (radius + 1) + sum(row[min(i, w - 1)] for i in range(1, radius + 1))
+                out = []
+                for x in range(w):
+                    out.append(acc / (2 * radius + 1))
+                    acc += row[min(x + radius + 1, w - 1)] - row[max(x - radius, 0)]
+                ch[y * w:(y + 1) * w] = out
+            for x in range(w):                       # svisle
+                col = ch[x::w]
+                acc = col[0] * (radius + 1) + sum(col[min(i, h - 1)] for i in range(1, radius + 1))
+                for y in range(h):
+                    ch[y * w + x] = acc / (2 * radius + 1)
+                    acc += col[min(y + radius + 1, h - 1)] - col[max(y - radius, 0)]
+    out = bytearray(w * h * 3)
+    for i in range(3):
+        out[i::3] = bytes(min(255, max(0, round(v))) for v in px[i])
+    return bytes(out)
+
+
+def blurred(src, dst, width=1920):
+    """Rozmazaná tapeta pro přihlášení: zmenší se, rozmaže a zase plynule zvětší (bez dalších knihoven)."""
+    try:
+        import gi
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf, GLib
+        pix = GdkPixbuf.Pixbuf.new_from_file(src)
+        w, h = pix.get_width(), pix.get_height()
+        sw, sh = 320, max(1, round(h * 320 / w))
+        small = pix.scale_simple(sw, sh, GdkPixbuf.InterpType.HYPER)
+        if small.get_has_alpha():
+            small = small.composite_color_simple(sw, sh, GdkPixbuf.InterpType.NEAREST, 255, 32, 0, 0)
+        stride, n = small.get_rowstride(), small.get_n_channels()
+        raw = small.get_pixels()
+        rgb = bytearray(sw * sh * 3)
+        for y in range(sh):
+            row = raw[y * stride:y * stride + sw * n]
+            for c in range(3):
+                rgb[y * sw * 3 + c:(y + 1) * sw * 3:3] = row[c::n][:sw]
+        soft = box_blur(bytes(rgb), sw, sh, radius=5)
+        out = GdkPixbuf.Pixbuf.new_from_bytes(GLib.Bytes.new(soft), GdkPixbuf.Colorspace.RGB, False, 8,
+                                              sw, sh, sw * 3)
+        out = out.scale_simple(width, round(h * width / w), GdkPixbuf.InterpType.HYPER)
+        out.savev(dst, "jpeg", ["quality"], ["92"])
+        return True
+    except Exception as err:
+        print(f"island-sddm-bg: rozmazání: {err}", file=sys.stderr)
+        return False
+
+
+def write_into(src, dst):
+    """Zápis do stávajícího souboru (složka tématu patří systému, nový soubor by tam nešel vytvořit)."""
+    with open(src, "rb") as fin, open(dst, "r+b") as fout:
+        data = fin.read()
+        fout.seek(0)
+        fout.write(data)
+        fout.truncate()
+
+
+def main():
+    src = current()
+    if not src:
+        return
+    if not os.access(OUT, os.W_OK):
+        print(f"island-sddm-bg: nemůžu zapisovat do {OUT} (spusť znovu sddm-install.sh)", file=sys.stderr)
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        if src.lower().endswith(VIDEO):
+            if not shutil.which("ffmpeg"):
+                return
+            frame = os.path.join(tmp, "frame.png")
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", "1", "-i", src, "-frames:v", "1", frame],
+                           check=False)
+            if not os.path.exists(frame):
+                return
+            src = frame
+        result = os.path.join(tmp, "background.jpg")
+        if not to_jpeg(src, result):
+            return
+        write_into(result, OUT)
+        soft = os.path.join(tmp, "background-blur.jpg")
+        if os.access(BLUR, os.W_OK) and blurred(result, soft):
+            write_into(soft, BLUR)
+    print(f"island-sddm-bg: pozadí přihlášení = {current()}")
+
+
+if __name__ == "__main__":
+    main()

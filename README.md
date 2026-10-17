@@ -378,3 +378,23 @@ Před každým přidáním je dobré zkontrolovat, že soubory neobsahují hesla
 ```bash
 grep -rniE "token|password|passwd|secret|api_key|privatekey" ~/dotfiles --exclude-dir=.git
 ```
+
+## Přihlašovací obrazovka (SDDM)
+
+Vlastní téma SDDM `island` ve složce `login/`:
+
+- po zapnutí jen velké hodiny na tapetě, datum vlevo nahoře, uspat / restart / vypnout vpravo nahoře
+- po stisku klávesy nebo kliknutí rozmazané pozadí, fotka účtu, jméno, heslo
+- vpravo dole výběr prostředí (Hyprland, GNOME…); SDDM si pamatuje poslední volbu
+- pozadí je vždy aktuální tapeta z plochy: `island-sddm-bg` ji při každé změně tapety (systemd `island-sddm-bg.path`) zkopíruje a připraví i rozmazanou verzi
+
+Instalace (zeptá se na heslo kvůli sudo, na konci nabídne přepnutí z GDM na SDDM):
+
+```bash
+bash ~/dotfiles/login/install.sh
+```
+
+Návrat ke GDM: `sudo systemctl disable sddm && sudo systemctl enable gdm`
+
+Pozor: SDDM čte `/etc/sddm.conf.d/*.conf` podle abecedy a poslední vyhrává, proto je nastavení tématu v `zz-island.conf`
+(jinak ho přepíše `kde_settings.conf` od KDE).

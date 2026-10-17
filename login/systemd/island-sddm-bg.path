@@ -1,0 +1,9 @@
+[Unit]
+Description=Hlídá změnu tapety (Island panel)
+
+[Path]
+PathChanged=%h/.local/state/island-panel/wallpaper
+Unit=island-sddm-bg.service
+
+[Install]
+WantedBy=default.target
