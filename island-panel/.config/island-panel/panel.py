@@ -80,7 +80,7 @@ SIDE_TRIGGER_HEIGHT = 320  # výška citlivého pruhu u pravého okraje (je upro
 SIDE_TRIGGER_WIDTH = 3     # šířka citlivého pruhu
 SLIDER_HEIGHT = 150      # výška posuvníků v bočním panelu
 SPIN_SECONDS = 8         # za jak dlouho se obal alba (deska) otočí jednou dokola; 0 = netočí se
-SPIN_FPS = 24            # kolikrát za sekundu se deska překreslí
+SPIN_FPS = 15            # kolikrát za sekundu se deska překreslí
 SIDE_OPEN_DELAY_MS = 300   # po jak dlouhé době na pravém okraji vyjede hlasitost a jas
 
 CENTER_ENABLED = True      # ovládací centrum u pravého okraje
@@ -2246,6 +2246,8 @@ class Panel(AutoHide):
     # ------------------------------------------------------------ záložky
     def select(self, name):
         self.stack.set_visible_child_name(name)
+        if self.visible:                          # nová záložka hned s čerstvými údaji
+            GLib.idle_add(lambda: (self.refresh_performance() if name == "performance" else self.refresh()) and False)
         self.follow_height()
         GLib.idle_add(lambda: self.move_indicator() and False)
         for key, btn in self.tab_buttons.items():
@@ -2318,8 +2320,9 @@ class Panel(AutoHide):
         target = page.get_preferred_height_for_width(width)[1]
         start = self.body_h if self.body_h is not None else target
         if target == start and self.height_tick is None:
-            self.apply_height(target)
-            return
+            if self.body_h != target:
+                self.apply_height(target)
+            return                                # výška sedí: nic nepřepočítávat (jinak by se celý panel přeskládal)
         if not animate or not self.win.get_mapped():
             self.apply_height(target)
             return
@@ -2392,7 +2395,8 @@ class Panel(AutoHide):
         now = datetime.datetime.now()
         self.c_hour.set_text(f"{now.hour:02d}")
         self.c_min.set_text(f"{now.minute:02d}")
-        self.refresh_media()
+        if self.tab in ("dashboard", "media"):    # přehrávač je vidět jen na těchto dvou záložkách
+            self.refresh_media()
         if self.tab == "dashboard":
             up = f"{I['clock']}  up {fmt_duration(self.stats.uptime())}"
             bat = self.stats.battery()
@@ -2405,8 +2409,7 @@ class Panel(AutoHide):
                 gauge.set(value)
                 text.set_text(f"{value:.0f}%")
             self.maybe_fetch_weather()
-        elif self.tab == "performance":
-            self.refresh_performance()
+        # Performance obnovuje background_sample každé 2 s (spolu s měřením GPU), tady by to bylo dvakrát
 
     def set_power_mode(self, key):
         if self.power.busy:
@@ -6891,7 +6894,39 @@ class Bar:
         self.rebuild()
         self.slow_refresh()
         GLib.timeout_add_seconds(2, self.refresh)
-        GLib.timeout_add_seconds(3, self.slow_refresh)
+        # síť, VPN a Bluetooth: místo dotazování každé 3 s se čeká na zprávy od NetworkManageru a BlueZ;
+        # pro jistotu se jednou za minutu stav zjistí i tak
+        self.pending = None
+        self.watch_dbus()
+        GLib.timeout_add_seconds(60, self.slow_refresh)
+
+    def watch_dbus(self):
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        except GLib.Error:
+            return
+        self.system_bus = bus
+        for sender in ("org.freedesktop.NetworkManager", "org.bluez"):
+            bus.signal_subscribe(sender, "org.freedesktop.DBus.Properties", "PropertiesChanged", None, None,
+                                 Gio.DBusSignalFlags.NONE, self.on_dbus_signal)
+        bus.signal_subscribe("org.bluez", "org.freedesktop.DBus.ObjectManager", None, None, None,
+                             Gio.DBusSignalFlags.NONE, self.on_dbus_signal)
+        bus.signal_subscribe("org.freedesktop.NetworkManager", "org.freedesktop.NetworkManager", "StateChanged",
+                             None, None, Gio.DBusSignalFlags.NONE, self.on_dbus_signal)
+
+    def on_dbus_signal(self, _bus, _sender, _path, _iface, member, params):
+        if member == "PropertiesChanged":
+            iface = params.unpack()[0] if params else ""
+            # síla signálu a statistiky chodí často a nic z nich nepotřebujeme (sílu čte refresh z /proc)
+            if iface.endswith((".AccessPoint", ".Statistics", ".Device.Wireless")):
+                return
+        if self.pending is None:                  # víc zpráv najednou = jeden dotaz
+            self.pending = GLib.timeout_add(400, self.on_pending)
+
+    def on_pending(self):
+        self.pending = None
+        self.slow_refresh()
+        return False
 
     def popouts(self):
         return [p for p in (self.app.panel, self.app.net) if p is not None]
@@ -6976,6 +7011,18 @@ class Bar:
         return f"{provider.capitalize()} · {country}" if provider and country else name
 
     @staticmethod
+    def wifi_strength(dev):
+        """Síla Wi-Fi rovnou z jádra (/proc/net/wireless), levné čtení bez spouštění programů."""
+        for line in read("/proc/net/wireless").splitlines()[2:]:
+            name, _, rest = line.partition(":")
+            if name.strip() == dev:
+                try:
+                    return min(100, round(float(rest.split()[1].rstrip(".")) * 100 / 70))
+                except (IndexError, ValueError):
+                    return 0
+        return 0
+
+    @staticmethod
     def rate(value):
         for unit in ("B/s", "kB/s", "MB/s", "GB/s"):
             if value < 999.5 or unit == "GB/s":
@@ -7036,7 +7083,7 @@ class Bar:
                            f"Download: {self.rate(down)}\nUpload: {self.rate(up)}", None)
         net = self.state["net"]
         if net is None or net[0] == "wifi":
-            name, strength = (net[1], net[2]) if net else ("", 0)
+            name, strength = (net[1], self.wifi_strength(net[3])) if net else ("", 0)
             out["net"] = (f"{strength}% ", f" {name} ({strength}%)", None)
         elif net[0] == "ethernet":
             out["net"] = (f"{net[1]} \U000f0200", f"{net[1]}", None)
@@ -7105,7 +7152,7 @@ class Bar:
                 if kind in ("wireguard", "vpn"):
                     vpn.append(self.vpn_name(name))
                 elif kind == "802-11-wireless" and (net is None or net[0] != "wifi"):
-                    net = ("wifi", name, wireless.get(dev, 0))
+                    net = ("wifi", name, wireless.get(dev, 0), dev)
                 elif kind == "802-3-ethernet" and net is None:
                     net = ("ethernet", dev, 0)
             if net is None:
