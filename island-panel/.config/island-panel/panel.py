@@ -122,6 +122,15 @@ POWER_MODES = [
 IND_SECONDS = 0.28
 QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
 
+BAR_ENABLED = True           # vlastní lišta nahoře místo Waybaru (okna z ní vyrůstají)
+BAR_GAP = 6                  # mezera nad ostrůvky (jako margin u Waybaru)
+BAR_BOTTOM = 2               # mezera pod ostrůvky
+BAR_MARGIN = 10              # odsazení levého a pravého ostrůvku od kraje obrazovky
+BAR_RADIUS = 16              # zaoblení ostrůvků
+BAR_CLOCK = "%H:%M %d.%m."   # formát času uprostřed
+MORPH_MS = 240               # jak dlouho ostrůvek roste a okno z něj vyjíždí
+BAR_FADE_GAP = 24            # na užším monitoru: boční ostrůvek blíž než tohle k rozšířenému středu se schová
+
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
 NET_WIDTH = 340              # šířka okna
 NET_TOP_MARGIN = 6           # mezera pod lištou
@@ -173,7 +182,7 @@ I = {
     "star": "\uf005", "eye": "\uf06e", "eye_off": "\uf070", "headphones": "\uf025", "mobile": "\uf10b", "keyboard": "\uf11c",
     "mouse": "\uf245", "gamepad": "\uf11b", "laptop": "\uf109", "tv": "\uf26c",
     "gpu": "\uf26c", "updown": "\uf0ec", "bolt": "\uf0e7", "caret": "\uf0d7",
-    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db", "rec": "\uf111", "stop": "\uf04d", "shield": "\uf132", "globe": "\uf0ac",
+    "download": "\uf019", "upload": "\uf093", "repeat": "\uf01e", "chip": "\uf2db", "rec": "\uf111", "stop": "\uf04d", "ethernet": "\uf0e8", "bluetooth": "\uf293", "shield": "\uf132", "globe": "\uf0ac",
     "w_sun": "\ue30d", "w_moon": "\ue32b", "w_partly": "\ue302", "w_cloud": "\ue312",
     "w_fog": "\ue313", "w_rain": "\ue318", "w_snow": "\ue31a", "w_storm": "\ue31d",
 }
@@ -1136,8 +1145,12 @@ class Gpu:
             device = os.path.join(base, "device")
             driver = os.path.basename(os.path.realpath(os.path.join(device, "driver")))
             info = {"base": base, "device": device, "driver": driver, "slot": os.path.basename(os.path.realpath(device))}
+            idle = [p for p in (f"{base}/gt/gt0/rc6_residency_ms", f"{base}/power/rc6_residency_ms",
+                                f"{device}/tile0/gt0/gtidle/idle_residency_ms") if os.path.exists(p)]
             if os.path.exists(os.path.join(device, "gpu_busy_percent")):
                 info["kind"] = "busy"
+            elif idle:                                   # Intel: podíl času, kdy grafika nespí
+                info["kind"], info["idle"] = "idle", idle[0]
             elif os.path.exists(os.path.join(base, "gt_act_freq_mhz")):
                 info["kind"] = "freq"
             elif driver == "nvidia" and shutil.which("nvidia-smi"):
@@ -1145,7 +1158,7 @@ class Gpu:
             else:
                 continue
             found.append(info)
-        found.sort(key=lambda i: {"busy": 0, "nvidia": 1, "freq": 2}[i["kind"]])
+        found.sort(key=lambda i: {"busy": 0, "nvidia": 1, "idle": 2, "freq": 3}[i["kind"]])
         if not found:
             return
         gpu = found[0]
@@ -1176,6 +1189,11 @@ class Gpu:
         try:
             if self.kind == "busy":
                 self.usage = float(read(os.path.join(self.paths["device"], "gpu_busy_percent")))
+            elif self.kind == "idle":
+                now, idle = time.monotonic() * 1000, float(read(self.paths["idle"]))
+                last, self.idle_last = getattr(self, "idle_last", None), (now, idle)
+                if last and now - last[0] > 200:
+                    self.usage = max(0.0, min(100.0, 100 * (1 - (idle - last[1]) / (now - last[0]))))
             elif self.kind == "freq":
                 now = float(read(os.path.join(self.paths["base"], "gt_act_freq_mhz")))
                 top = float(read(os.path.join(self.paths["base"], "gt_RP0_freq_mhz"), "0") or
@@ -1402,6 +1420,70 @@ def screen_locked():
     return _locked_cache[1]
 
 
+EDGE_RADIUS = 16      # zaoblení panelů u pravého okraje (vnější rohy i přechod do okraje obrazovky)
+
+
+def css_box(widget):
+    """Obdélník widgetu bez okrajů (margin) z CSS: x, y, šířka, výška."""
+    m = widget.get_style_context().get_margin(Gtk.StateFlags.NORMAL)
+    a = widget.get_allocation()
+    return a.x + m.left, a.y + m.top, a.width - m.left - m.right, a.height - m.top - m.bottom
+
+
+def draw_edge_panel(win, box, cr, bump=None):
+    """Pozadí panelu přilepeného k pravému okraji obrazovky: vlevo zaoblené rohy, vpravo navazuje
+    na okraj obrazovky vydutým zaoblením nahoře i dole (jako by z okraje vyrůstal).
+    bump = menší část přilepená zleva (sloupec tlačítek), napojená stejným vydutým zaoblením."""
+    if not box.get_visible():
+        return False
+    ctx = box.get_style_context()
+    x, y, _w, h = css_box(box)
+    right = win.get_allocated_width()
+    r, f = min(EDGE_RADIUS, h / 2), EDGE_RADIUS
+    if h <= 0 or right - x <= r:
+        return False
+    side = None
+    if bump is not None and bump.get_visible():
+        bx, by, _bw, bh = css_box(bump)
+        if bx < x and by - f >= y + r and by + bh + f <= y + h - r:
+            side = (bx, by, bh, min(EDGE_RADIUS, bh / 2))
+
+    def outline(close):
+        cr.new_path()
+        cr.move_to(right, y - f)
+        cr.arc(right - f, y - f, f, 0, math.pi / 2)                     # vydutí nahoře
+        cr.line_to(x + r, y)
+        cr.arc_negative(x + r, y + r, r, 3 * math.pi / 2, math.pi)     # levý horní roh
+        if side:                                                       # sloupec tlačítek vlevo
+            bx, by, bh, br = side
+            cr.line_to(x, by - f)
+            cr.arc(x - f, by - f, f, 0, math.pi / 2)
+            cr.line_to(bx + br, by)
+            cr.arc_negative(bx + br, by + br, br, 3 * math.pi / 2, math.pi)
+            cr.line_to(bx, by + bh - br)
+            cr.arc_negative(bx + br, by + bh - br, br, math.pi, math.pi / 2)
+            cr.line_to(x - f, by + bh)
+            cr.arc(x - f, by + bh + f, f, -math.pi / 2, 0)
+        cr.line_to(x, y + h - r)
+        cr.arc_negative(x + r, y + h - r, r, math.pi, math.pi / 2)     # levý dolní roh
+        cr.line_to(right - f, y + h)
+        cr.arc(right - f, y + h + f, f, -math.pi / 2, 0)               # vydutí dole
+        if close:
+            cr.close_path()
+
+    outline(True)
+    cr.set_source_rgba(*rgba_tuple(ctx, "island", (0.04, 0.12, 0.17, 0.93)))
+    cr.fill()
+    cr.save()
+    cr.translate(0.5, 0)
+    outline(False)
+    cr.restore()
+    cr.set_source_rgba(*rgba_tuple(ctx, "island_border", (0.49, 0.75, 0.86, 0.25)))
+    cr.set_line_width(1)
+    cr.stroke()
+    return False
+
+
 def hypr_socket(name):
     sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
     run_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
@@ -1488,8 +1570,12 @@ class AutoHide:
             GLib.source_remove(self.close_timer)
             self.close_timer = None
 
+    attach = None          # (okno lišty, ostrůvek), když okno vyrůstá z lišty
+
     def pointer_inside(self):
         """Je kurzor právě nad panelem? Ptáme se přímo, události enter/leave chodí i při klikání."""
+        if self.attach and self.attach[0].pointer_in(self.attach[1]):
+            return True            # kurzor je na ostrůvku, ze kterého okno vyrostlo
         gdk_win = self.win.get_window()
         if gdk_win is None:
             return False
@@ -1501,6 +1587,32 @@ class AutoHide:
             return False
         top = under.get_toplevel()
         return top == gdk_win or any(top == c.get_window() for c in self.companions if c.get_window() is not None)
+
+    def schedule_close(self):
+        """Kurzor odjel z ostrůvku: za chvíli zavřít, pokud není nad oknem."""
+        if self.close_timer is None:
+            self.close_timer = GLib.timeout_add(CLOSE_DELAY_MS, self.close_if_outside)
+
+    def attach_to_bar(self, key, width, origin=None):
+        """Napojí okno na ostrůvek lišty (když lišta běží). Vrací šířku, kterou má okno mít."""
+        bar = getattr(self.app, "bar", None)
+        if bar is None:
+            self.attach = None
+            return width
+        result = bar.attach(self, key, width, origin)
+        if result is None:
+            self.attach = None
+            return width
+        bw, key, width = result
+        self.attach = (bw, key)
+        return width
+
+    def detach_from_bar(self):
+        if self.attach:
+            self.attach[0].close(self.attach[1])
+
+    def morph_tick(self):
+        """Ostrůvek, ze kterého okno vyrůstá, změnil šířku."""
 
     def close_if_outside(self):
         self.close_timer = None
@@ -1554,8 +1666,19 @@ class Panel(AutoHide):
         # okno má stálou výšku (nejvyšší záložka) a nikdy se nezvětšuje ani nezmenšuje;
         # panel uvnitř je jen tak vysoký, jak je potřeba, zbytek okna je průhledný a propouští klikání
         outer = Gtk.Fixed()                     # panel vždy přilepený k hornímu okraji okna
-        outer.put(root, 0, 0)
+        # panel vyjíždí shora (z ostrůvku s časem); hide_timer = schovat okno až po dojetí animace
+        self.reveal = Gtk.Revealer(transition_type=Gtk.RevealerTransitionType.SLIDE_DOWN,
+                                   transition_duration=MORPH_MS)
+        self.reveal.add(root)
+        self.reveal.connect("size-allocate", lambda *_: self.update_input())
+        self.hide_timer = None
+        outer.put(self.reveal, 0, 0)
+        # dokud ostrůvek s časem roste, je panel ořízlý na jeho šířku (žádné schody mezi nimi)
+        self.outer = outer
+        outer.connect("draw", self.clip_to_island)
+        outer.connect_after("draw", self.draw_morph_edge)
         outer.show()
+        self.reveal.show()
         self.win.add(outer)
         self.win.connect("size-allocate", lambda *_: self.update_input())
 
@@ -1589,7 +1712,8 @@ class Panel(AutoHide):
         overlay.set_margin_bottom(10)
         root.pack_start(overlay, False, False, 0)
 
-        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=220)
+        # přepnutí záložky obsah odsune do strany (směr podle pořadí záložek), nepřekreslí ho najednou
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT, transition_duration=260)
         self.stack.set_hhomogeneous(True)
         self.stack.set_vhomogeneous(False)      # každá záložka jen tak vysoká, jak potřebuje
         self.height_tick, self.body_h = None, None
@@ -2236,10 +2360,9 @@ class Panel(AutoHide):
         gdk_win = self.win.get_window()
         if gdk_win is None:
             return
-        area = self.root.get_allocation()
-        height = self.root.get_preferred_height_for_width(max(1, area.width))[1]
+        area = self.reveal.get_allocation()
         gdk_win.input_shape_combine_region(
-            cairo.Region(cairo.RectangleInt(area.x, area.y, max(1, area.width), max(1, height))), 0, 0)
+            cairo.Region(cairo.RectangleInt(area.x, area.y, max(1, area.width), max(1, area.height))), 0, 0)
 
     @property
     def tab(self):
@@ -2428,7 +2551,7 @@ class Panel(AutoHide):
         threading.Thread(target=work, daemon=True).start()
 
     # ------------------------------------------------------------ zobrazení
-    def show(self, by_key=False, tab=None):
+    def show(self, by_key=False, tab=None, origin=None):
         if screen_locked():
             return
         self.cancel_close()
@@ -2437,11 +2560,21 @@ class Panel(AutoHide):
         if self.visible:
             return
         self.visible = True
+        if self.hide_timer is not None:                 # ještě zajíždělo: jen se vrátí
+            GLib.source_remove(self.hide_timer)
+            self.hide_timer = None
+        width = self.attach_to_bar("center", PANEL_WIDTH, origin)
+        attached = self.attach is not None
+        set_class(self.root, "attached", attached)
+        self.root.set_size_request(width, -1)
         if GtkLayerShell.is_supported():
             mode = GtkLayerShell.KeyboardMode.EXCLUSIVE if by_key else GtkLayerShell.KeyboardMode.ON_DEMAND
             GtkLayerShell.set_keyboard_mode(self.win, mode)
+            GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.TOP,
+                                     self.attach[0].island_bottom() if attached else 0)
         self.calendar.reset()
         self.win.show()
+        GLib.idle_add(lambda: self.visible and self.reveal.set_reveal_child(True) and False)
         self.refresh()
         if self.tab == "apps":
             self.search.grab_focus()
@@ -2455,15 +2588,60 @@ class Panel(AutoHide):
         if not self.visible:
             return
         self.visible = False
+        self.reveal.set_reveal_child(False)
+        self.detach_from_bar()
+        if self.hide_timer is None:
+            self.hide_timer = GLib.timeout_add(MORPH_MS + 30, self.finish_hide)
+
+    def morph_rect(self):
+        """Viditelná část panelu během narůstání: x, y, šířka, výška (None = celý panel)."""
+        if not self.attach:
+            return None
+        bw, key = self.attach
+        if bw.progress(key) >= 1:
+            return None
+        a = self.reveal.get_allocation()
+        margin = self.root.get_style_context().get_margin(Gtk.StateFlags.NORMAL)
+        height = a.height - margin.bottom
+        width = min(bw.rect(key)[2], a.width)
+        return a.x + (a.width - width) / 2, a.y, width, max(0, height)
+
+    def clip_to_island(self, _widget, cr):
+        rect = self.morph_rect()
+        if rect is not None:
+            x, y, w, h = rect
+            island_path(cr, x, y, w, max(h, 0.1), 0, min(BAR_RADIUS, h / 2))
+            cr.clip()
+        return False
+
+    def draw_morph_edge(self, widget, cr):
+        rect = self.morph_rect()
+        if rect is None or rect[3] < 1:
+            return False
+        x, y, w, h = rect
+        open_outline(cr, x + 0.5, y, w - 1, h - 0.5, 0, max(0, min(BAR_RADIUS, h / 2) - 0.5), open_top=True)
+        cr.set_source_rgba(*rgba_tuple(self.root.get_style_context(), "island_border", (0.49, 0.75, 0.86, 0.25)))
+        cr.set_line_width(1)
+        cr.stroke()
+        return False
+
+    def morph_tick(self):
+        self.outer.queue_draw()
+
+    def finish_hide(self):
+        self.hide_timer = None
+        if self.visible:
+            return False
         self.win.hide()
         self.search.set_text("")
         self.select("dashboard")   # příště zase začít přehledem
+        return False
 
-    def toggle(self):
+    def toggle(self, origin=None):
         if self.visible:
             self.hide()
         else:
-            self.show(by_key=True)
+            self.show(by_key=origin is None, origin=origin)
 
     def on_key(self, _win, event):
         if event.keyval == Gdk.KEY_Escape:
@@ -2739,6 +2917,7 @@ class SidePanel(AutoHide):
         root.set_name("side")
         root.set_margin_end(EDGE_OVERHANG)   # vyrovná přesah okna, panel zůstane na stejném místě
         self.win.add(root)
+        self.win.connect("draw", lambda win, cr: draw_edge_panel(win, root, cr))
 
         # hlasitost: klik na kolečko ztlumí / zruší ztlumení
         self.v_slider = VSlider(self.set_volume, self.volume_icon, on_knob=self.toggle_mute, height=SLIDER_HEIGHT)
@@ -3349,7 +3528,7 @@ class ControlCenter(AutoHide):
             GtkLayerShell.set_anchor(self.win, GtkLayerShell.Edge.TOP, True)
             GtkLayerShell.set_anchor(self.win, GtkLayerShell.Edge.BOTTOM, True)
         self.watch_pointer()
-        outer = hbox(10)
+        outer = hbox(0)                    # sloupec tlačítek přilepený k panelu
         outer.set_margin_end(EDGE_OVERHANG)
         self.win.add(outer)
         outer.pack_start(self.build_session(), False, False, 0)
@@ -3357,6 +3536,9 @@ class ControlCenter(AutoHide):
         main = vbox(10)
         main.set_name("center")
         main.set_size_request(CENTER_WIDTH, -1)
+        self.win.connect("draw", lambda win, cr: draw_edge_panel(win, main, cr, self.session_box))
+        if GtkLayerShell.is_supported():
+            GtkLayerShell.set_exclusive_zone(self.win, 0)       # začíná pod lištou, ne přes ni
         outer.pack_start(main, False, False, 0)
         main.pack_start(self.build_notifications(), True, True, 0)
         main.pack_start(self.build_windows(), False, False, 0)
@@ -3388,8 +3570,9 @@ class ControlCenter(AutoHide):
         column.set_name("session")
         column.set_valign(Gtk.Align.CENTER)
         self.session_buttons = {}
-        for key, icon, _title, _confirm in self.SESSION:
+        for key, icon, title, _confirm in self.SESSION:
             button = css(Gtk.Button(), "flat", "session-btn")
+            button.set_tooltip_text(title)
             button.title_label = label(I[icon], "session-icon")   # jen ikona; při potvrzování se změní na fajfku
             button.title = I[icon]
             button.add(button.title_label)
@@ -3737,11 +3920,9 @@ class ControlCenter(AutoHide):
         self.toggle_buttons, self.toggle_state = {}, {}
         for key, _on, off, title, available, _get, _set in self.toggles:
             button = css(Gtk.Button(), "flat", "toggle")
-            inner = vbox(4)
-            icon = label(I[off], "toggle-icon")
-            inner.pack_start(icon, False, False, 0)
-            inner.pack_start(label(title, "toggle-label"), False, False, 0)
-            button.add(inner)
+            icon = label(I[off], "toggle-icon")        # jen ikona, popis v bublině
+            button.add(icon)
+            button.set_tooltip_text(title)
             button.icon = icon
             button.set_sensitive(available)
             button.connect("clicked", lambda _b, k=key: self.toggle_clicked(k))
@@ -6108,6 +6289,7 @@ class Connections(AutoHide):
     """Okno pod pravým ostrůvkem lišty se záložkami Wi-Fi a Bluetooth."""
 
     def __init__(self, app):
+        self.app = app
         self.visible, self.close_timer, self.tick_timer = False, None, None
         self.current, self.fitted = None, 0.0
         self.win = layer_window(app, "island-net")
@@ -6124,10 +6306,15 @@ class Connections(AutoHide):
         self.shown_at, self.away_timer = 0.0, None
         app.hypr_events.connect(self.on_hypr_event)
 
-        root = vbox(10)
+        root = self.root = vbox(10)
         root.set_name("net")
         root.set_size_request(NET_WIDTH, -1)
-        self.win.add(root)
+        self.reveal = Gtk.Revealer(transition_type=Gtk.RevealerTransitionType.SLIDE_DOWN,
+                                   transition_duration=MORPH_MS)
+        self.reveal.add(root)
+        self.reveal.show()
+        self.hide_timer = None
+        self.win.add(self.reveal)
         head = hbox(4)
         self.pages, self.tabs = {}, {}
         for page in (WifiPage(self), BluetoothPage(self), VpnPage(self)):
@@ -6256,7 +6443,7 @@ class Connections(AutoHide):
             self.hide()
         return False
 
-    def show(self, key=None):
+    def show(self, key=None, origin=None):
         if screen_locked():
             return
         self.cancel_close()
@@ -6266,7 +6453,22 @@ class Connections(AutoHide):
             return
         self.visible = True
         self.shown_at = time.monotonic()
+        if self.hide_timer is not None:
+            GLib.source_remove(self.hide_timer)
+            self.hide_timer = None
+        width = self.attach_to_bar("right", NET_WIDTH, origin)
+        attached = self.attach is not None
+        set_class(self.root, "attached", attached)
+        self.root.set_size_request(width, -1)
+        if GtkLayerShell.is_supported():
+            GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.TOP,
+                                     self.attach[0].island_bottom() if attached else NET_TOP_MARGIN)
+            GtkLayerShell.set_margin(self.win, GtkLayerShell.Edge.RIGHT, BAR_MARGIN if attached else NET_RIGHT_MARGIN)
+            # napojené okno se měří od horního okraje obrazovky, jinak se řadí pod lištu
+            GtkLayerShell.set_exclusive_zone(self.win, -1 if attached else 0)
+        self.win.set_size_request(-1, 1)          # prázdné (zasunuté) okno nesmí mít nulovou výšku
         self.win.show()
+        GLib.idle_add(lambda: self.visible and self.reveal.set_reveal_child(True) and False)
         if self.away_timer is None:
             self.away_timer = GLib.timeout_add(250, self.check_away)
         self.page().refresh(deep=True)
@@ -6287,11 +6489,22 @@ class Connections(AutoHide):
         if self.away_timer is not None:
             GLib.source_remove(self.away_timer)
             self.away_timer = None
+        self.reveal.set_reveal_child(False)
+        self.detach_from_bar()
+        if self.hide_timer is None:
+            self.hide_timer = GLib.timeout_add(MORPH_MS + 30, self.finish_hide)
+
+    def finish_hide(self):
+        self.hide_timer = None
+        if self.visible:
+            return False
         self.win.hide()
+        self.fit()
         for page in self.pages.values():
             if page.busy is None:
                 page.collapse()
                 page.render()
+        return False
 
     def on_hypr_event(self, name, data):
         """Kliknutí na jiné okno nebo přepnutí plochy okno zavře (i během psaní hesla)."""
@@ -6322,11 +6535,605 @@ class Connections(AutoHide):
                 break
         return True
 
-    def toggle(self, key):
+    def toggle(self, key, origin=None):
         if self.visible and self.current == key:
             self.hide()
         else:
-            self.show(key)
+            self.show(key, origin)
+
+
+# ----------------------------------------------------------------------------
+# Lišta nahoře (místo Waybaru): tři ostrůvky; prostřední a pravý umí narůst a vysunout z nich okno.
+# Vzhled i obsah je stejný jako u dřívějšího Waybaru (barvy a písmo v style.css, sekce "Lišta nahoře").
+# ----------------------------------------------------------------------------
+def ease_out(t):
+    t = max(0.0, min(1.0, t))
+    return 1 - (1 - t) ** 3
+
+
+def island_path(cr, x, y, w, h, top, bottom):
+    """Obdélník se zaoblením nahoře (top) a dole (bottom)."""
+    top, bottom = max(0.0, min(top, h / 2, w / 2)), max(0.0, min(bottom, h / 2, w / 2))
+    cr.new_sub_path()
+    cr.arc(x + w - top, y + top, top, -math.pi / 2, 0)
+    cr.arc(x + w - bottom, y + h - bottom, bottom, 0, math.pi / 2)
+    cr.arc(x + bottom, y + h - bottom, bottom, math.pi / 2, math.pi)
+    cr.arc(x + top, y + top, top, math.pi, 3 * math.pi / 2)
+    cr.close_path()
+
+
+def open_outline(cr, x, y, w, h, top, bottom, open_top=False, open_bottom=False):
+    """Okraj obdélníku, u kterého může chybět horní nebo spodní hrana (tam navazuje druhá část)."""
+    top, bottom = max(0.0, min(top, h / 2, w / 2)), max(0.0, min(bottom, h / 2, w / 2))
+    if open_top:                                   # dolní část: levá hrana, spodek, pravá hrana
+        cr.move_to(x, y)
+        cr.arc_negative(x + bottom, y + h - bottom, bottom, math.pi, math.pi / 2)
+        cr.arc_negative(x + w - bottom, y + h - bottom, bottom, math.pi / 2, 0)
+        cr.line_to(x + w, y)
+    elif open_bottom:                              # horní část: levá hrana, vršek, pravá hrana
+        cr.move_to(x, y + h)
+        cr.arc(x + top, y + top, top, math.pi, 3 * math.pi / 2)
+        cr.arc(x + w - top, y + top, top, -math.pi / 2, 0)
+        cr.line_to(x + w, y + h)
+    else:
+        island_path(cr, x, y, w, h, top, bottom)
+
+
+def mix_rgba(a, b, p):
+    return tuple(a[i] + (b[i] - a[i]) * p for i in range(4))
+
+
+def rgba_tuple(ctx, name, fallback):
+    ok, color = ctx.lookup_color(name)
+    return (color.red, color.green, color.blue, color.alpha) if ok else fallback
+
+
+class BarWindow:
+    """Lišta na jednom monitoru."""
+    KEYS = ("left", "center", "right")
+
+    def __init__(self, bar, monitor):
+        self.bar, self.monitor = bar, monitor
+        self.anim = {k: {"p": 0.0, "from": 0.0, "to": 0.0, "start": 0.0, "width": 0} for k in self.KEYS}
+        self.tick_id, self.hover_zone, self.open_timer, self.poll_id = None, None, None, None
+        self.exclusive = 0
+        self.collide, self.misses = {}, 0
+        win = self.win = Gtk.Window(application=bar.app)
+        win.set_decorated(False)
+        win.set_app_paintable(True)
+        visual = win.get_screen().get_rgba_visual()
+        if visual:
+            win.set_visual(visual)
+        if GtkLayerShell.is_supported():
+            GtkLayerShell.init_for_window(win)
+            GtkLayerShell.set_namespace(win, "island-bar")
+            GtkLayerShell.set_layer(win, GtkLayerShell.Layer.TOP)
+            for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
+                GtkLayerShell.set_anchor(win, edge, True)
+            GtkLayerShell.set_monitor(win, monitor)
+        # kde je kurzor, se zjišťuje průběžně, dokud je nad lištou (tlačítka by pohyb myši spolkla)
+        win.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK)
+        win.connect("enter-notify-event", self.on_enter)
+
+        # ostrůvky (pozadí) kreslí samo okno, moduly se nakreslí přes ně
+        self.area = win
+        win.get_style_context().add_class("bar-bg")
+        win.connect("draw", self.on_draw)
+        column = vbox(0)
+        column.set_valign(Gtk.Align.START)
+        spacer = Gtk.Box()
+        spacer.set_size_request(-1, BAR_GAP)
+        column.pack_start(spacer, False, False, 0)
+        row = Gtk.Box()
+        column.pack_start(row, False, False, 0)
+        bottom = Gtk.Box()
+        bottom.set_size_request(-1, BAR_BOTTOM)
+        column.pack_start(bottom, False, False, 0)
+        self.boxes, self.inner = {}, {}
+        for key in self.KEYS:
+            box = hbox(0, "bar-island", f"bar-{key}")
+            inner = hbox(0)
+            inner.set_valign(Gtk.Align.CENTER)
+            # odsazení jako padding: 3px 5px u Waybaru (+1 px okraj)
+            inner.set_margin_start(6)
+            inner.set_margin_end(6)
+            inner.set_margin_top(4)
+            inner.set_margin_bottom(4)
+            box.pack_start(inner, True, True, 0)
+            self.boxes[key], self.inner[key] = box, inner
+        self.boxes["left"].set_margin_start(BAR_MARGIN)
+        self.boxes["right"].set_margin_end(BAR_MARGIN)
+        row.pack_start(self.boxes["left"], False, False, 0)
+        row.set_center_widget(self.boxes["center"])
+        row.pack_end(self.boxes["right"], False, False, 0)
+        win.add(column)
+        self.mods = {}
+        bar.build_modules(self)
+        win.connect("size-allocate", lambda *_: self.on_allocate())
+        column.show_all()
+        bar.apply(self)
+        win.show()
+
+    def on_allocate(self):
+        """Lišta zabírá oknům místo jako Waybar: mezera nahoře + ostrůvek + 2 px."""
+        need = self.island_bottom() + BAR_BOTTOM
+        if need != self.exclusive and GtkLayerShell.is_supported():
+            self.exclusive = need
+            GtkLayerShell.set_exclusive_zone(self.win, need)
+        self.update_input()
+
+    def island_bottom(self):
+        a = self.boxes["center"].get_allocation()
+        return a.y + a.height if a.height > 1 else BAR_GAP + 33
+
+    # ------------------------------------------------------------ tvar
+    def rect(self, key):
+        """Kde je ostrůvek právě nakreslený (i s narůstáním): x, y, šířka, výška."""
+        a = self.boxes[key].get_allocation()
+        x, w = a.x, a.width
+        st = self.anim[key]
+        p = st["p"]
+        if p > 0 and st["width"] > w:
+            nw = w + (st["width"] - w) * p
+            x = x + (w - nw) / 2 if key == "center" else x + w - nw if key == "right" else x
+            w = nw
+        return x, a.y, w, a.height
+
+    def progress(self, key):
+        return self.anim[key]["p"]
+
+    def fade(self, key):
+        """Jak moc je boční ostrůvek schovaný: na užším monitoru by do něj rozšířený střed narazil,
+        tak se po dobu otevření přehledu rozplyne (na širokém monitoru se nic neděje)."""
+        center = self.anim["center"]
+        if key == "center" or center["p"] <= 0:
+            return 0.0
+        return center["p"] if self.collide.get(key) else 0.0
+
+    def check_collisions(self):
+        """Které boční ostrůvky by rozšířený střed zasáhl. Zjistí se jednou při otevření a platí,
+        dokud přehled nezajede (jinak by ostrůvek blikal, když se mu mění šířka textu)."""
+        center = self.anim["center"]
+        c = self.boxes["center"].get_allocation()
+        # pravý ostrůvek mění šířku (rychlost sítě), proto se řídí levým: schová se levý = schová se i pravý
+        hide = self.collides("left", c, center)
+        self.collide["left"] = self.collide["right"] = hide
+
+    def collides(self, key, c, center):
+        width = max(center["width"], c.width)
+        left_edge = c.x + c.width / 2 - width / 2
+        a = self.boxes[key].get_allocation()
+        if key == "left":
+            return a.x + a.width + BAR_FADE_GAP > left_edge
+        return a.x < left_edge + width + BAR_FADE_GAP
+
+    def natural_width(self, key):
+        return self.boxes[key].get_allocation().width
+
+    def on_draw(self, area, cr):
+        ctx = area.get_style_context()
+        bar_bg = rgba_tuple(ctx, "bar_island", (0.04, 0.12, 0.17, 0.80))
+        open_bg = rgba_tuple(ctx, "island", (0.04, 0.12, 0.17, 0.93))
+        line = rgba_tuple(ctx, "island_border", (0.49, 0.75, 0.86, 0.25))
+        for key in self.KEYS:
+            x, y, w, h = self.rect(key)
+            fade = self.fade(key)
+            if w <= 1 or fade >= 1:
+                continue
+            p = self.progress(key)
+            bottom = BAR_RADIUS * (1 - p)
+            # schovávaný ostrůvek zároveň vyjede nahoru za okraj obrazovky; rozmazání pod ním
+            # (blur v Hyprlandu) se drží jeho tvaru, takže zmizí s ním a nezůstane po něm skvrna
+            y -= fade * (y + h + 2)
+            island_path(cr, x, y, w, h, BAR_RADIUS, bottom)
+            # při otevírání ostrůvek plynule přejde do barvy vysunutého okna, ať spolu splynou
+            r, g, b, alpha = mix_rgba(bar_bg, open_bg, p)
+            cr.set_source_rgba(r, g, b, alpha * (1 - fade))
+            cr.fill()
+            open_outline(cr, x + 0.5, y + 0.5, w - 1, h - 0.5, BAR_RADIUS - 0.5, max(0, bottom - 0.5),
+                         open_bottom=p > 0.02)
+            cr.set_source_rgba(line[0], line[1], line[2], line[3] * (1 - fade))
+            cr.set_line_width(1)
+            cr.stroke()
+        return False
+
+    def update_input(self):
+        gdk_win = self.win.get_window()
+        if gdk_win is None:
+            return
+        region = cairo.Region()
+        for key in self.KEYS:
+            x, y, w, h = self.rect(key)
+            if w > 1 and self.fade(key) < 0.5:
+                # i pruh nad ostrůvkem až k hornímu okraji obrazovky (kurzor dotlačený nahoru)
+                region.union(cairo.RectangleInt(int(x), 0, int(math.ceil(w)), int(y + h)))
+        sx, sw = self.trigger_strip()
+        region.union(cairo.RectangleInt(int(sx), 0, int(sw), BAR_GAP))
+        gdk_win.input_shape_combine_region(region, 0, 0)
+
+    # ------------------------------------------------------------ narůstání
+    def open(self, key, width):
+        self.anim[key]["width"] = width
+        if key == "center" and self.anim["center"]["p"] <= 0:
+            self.check_collisions()
+        self.animate(key, 1.0)
+
+    def close(self, key):
+        self.animate(key, 0.0)
+
+    def animate(self, key, target):
+        st = self.anim[key]
+        st["from"], st["to"], st["start"] = st["p"], target, GLib.get_monotonic_time() / 1e6
+        if self.tick_id is None:
+            # krok animace v rytmu obnovování displeje (90 Hz, 144 Hz…), ne podle vlastního časovače
+            self.tick_id = self.win.add_tick_callback(self.on_tick)
+
+    def on_tick(self, _widget, clock):
+        busy = self.step(clock.get_frame_time() / 1e6)
+        if not busy:
+            self.tick_id = None
+        return busy
+
+    def step(self, now):
+        busy = False
+        for st in self.anim.values():
+            if st["p"] == st["to"]:
+                continue
+            t = (now - st["start"]) / (MORPH_MS / 1000)
+            # stejné zpomalení na konci při otevírání i zavírání (jako vysouvání okna)
+            st["p"] = st["to"] if t >= 1 else st["from"] + (st["to"] - st["from"]) * ease_out(t)
+            busy = busy or st["p"] != st["to"]
+        self.area.queue_draw()
+        self.update_input()
+        for key in ("left", "right"):
+            self.boxes[key].set_opacity(max(0.0, 1 - 2 * self.fade(key)))   # text zmizí v první polovině
+        for popout in self.bar.popouts():          # okno pod ostrůvkem se překreslí se stejnou šířkou
+            if popout.attach and popout.attach[0] is self:
+                popout.morph_tick()
+        return busy
+
+    # ------------------------------------------------------------ kurzor
+    def trigger_strip(self):
+        """Pruh u horního okraje nad časem, po najetí do něj vyjede přehled (jako dřív bez lišty)."""
+        x, _y, w, _h = self.rect("center")
+        mid, half = x + w / 2, max(w, TRIGGER_WIDTH) / 2
+        return mid - half, 2 * half
+
+    def zone_at(self, x, y):
+        for key in ("center", "left", "right"):
+            if self.fade(key) >= 0.5:
+                continue
+            rx, ry, rw, rh = self.rect(key)
+            if rx <= x < rx + rw and y < ry + rh:
+                return key
+        sx, sw = self.trigger_strip()
+        if y < BAR_GAP and sx <= x < sx + sw:
+            return "center"
+        return None
+
+    def pointer_in(self, key):
+        gdk_win = self.win.get_window()
+        if gdk_win is None:
+            return False
+        pointer = gdk_win.get_display().get_default_seat().get_pointer()
+        under = pointer.get_window_at_position()[0] if pointer else None
+        if under is not None and under.get_toplevel() == gdk_win:
+            _w, x, y, _m = gdk_win.get_device_position(pointer)
+            return self.zone_at(x, y) == key
+        # GTK o kurzoru chvíli neví (Hyprland přeskládal okna): zeptat se přímo Hyprlandu
+        pos = hypr_json("cursorpos")
+        if not pos:
+            return False
+        g = self.monitor.get_geometry()
+        x, y = pos.get("x", -1) - g.x, pos.get("y", -1) - g.y
+        return 0 <= x < g.width and 0 <= y < self.island_bottom() and self.zone_at(x, y) == key
+
+    def on_enter(self, *_):
+        if self.poll_id is None:
+            self.poll_id = GLib.timeout_add(50, self.poll)
+        return False
+
+    def poll(self):
+        gdk_win = self.win.get_window()
+        pointer = gdk_win.get_display().get_default_seat().get_pointer() if gdk_win else None
+        under = pointer.get_window_at_position()[0] if pointer else None
+        if under is None or under.get_toplevel() != gdk_win:
+            # krátké "odjetí", když Hyprland přeskládá okna, nebrat vážně: až po 4 kontrolách
+            self.misses += 1
+            if self.misses < 4:
+                return True
+            self.misses = 0
+            self.set_zone(None)
+            self.poll_id = None
+            return False
+        self.misses = 0
+        _w, x, y, _m = gdk_win.get_device_position(pointer)
+        self.set_zone(self.zone_at(x, y))
+        return True
+
+    def set_zone(self, zone):
+        if zone == self.hover_zone:
+            return
+        old, self.hover_zone = self.hover_zone, zone
+        if self.open_timer is not None:
+            GLib.source_remove(self.open_timer)
+            self.open_timer = None
+        if zone == "center" and not self.bar.app.panel.visible:
+            self.open_timer = GLib.timeout_add(OPEN_DELAY_MS, self.open_dashboard)
+        if old is not None:
+            for popout in self.bar.popouts():
+                if popout.visible and popout.attach == (self, old):
+                    popout.schedule_close()
+
+    def open_dashboard(self):
+        self.open_timer = None
+        if self.hover_zone == "center":
+            self.bar.app.panel.show(origin=self)
+        return False
+
+
+class Bar:
+    """Lišta na všech monitorech + data pro moduly (stejné jako dřív ve Waybaru)."""
+    TEMP_PATH = "/sys/class/hwmon/hwmon8/temp1_input"     # čidlo, které používal Waybar
+
+    def __init__(self, app):
+        self.app = app
+        self.windows = []
+        self.gpu = Gpu()
+        self.gpu.sample()
+        self.state = {"net": None, "vpn": [], "bt": None}
+        self.busy = False
+        self.net_last, self.net_rate = None, (0.0, 0.0)
+        self.temp_path = self.TEMP_PATH if os.path.exists(self.TEMP_PATH) else find_temp_sensor()
+        display = Gdk.Display.get_default()
+        display.connect("monitor-added", lambda *_: GLib.timeout_add(500, self.rebuild))
+        display.connect("monitor-removed", lambda *_: GLib.timeout_add(500, self.rebuild))
+        self.rebuild()
+        self.slow_refresh()
+        GLib.timeout_add_seconds(2, self.refresh)
+        GLib.timeout_add_seconds(3, self.slow_refresh)
+
+    def popouts(self):
+        return [p for p in (self.app.panel, self.app.net) if p is not None]
+
+    def rebuild(self):
+        display = Gdk.Display.get_default()
+        monitors = [display.get_monitor(i) for i in range(display.get_n_monitors())]
+        keep = []
+        for bw in self.windows:
+            if bw.monitor in monitors:
+                keep.append(bw)
+            else:
+                bw.win.destroy()
+        known = [bw.monitor for bw in keep]
+        for monitor in monitors:
+            if monitor not in known:
+                keep.append(BarWindow(self, monitor))
+        self.windows = keep
+        return False
+
+    def window_for(self, origin=None):
+        if origin in self.windows:
+            return origin
+        mons = hypr_json("monitors") or []
+        focused = next((m for m in mons if m.get("focused")), None)
+        if focused:
+            for bw in self.windows:
+                g = bw.monitor.get_geometry()
+                if (g.x, g.y) == (focused.get("x"), focused.get("y")):
+                    return bw
+        return self.windows[0] if self.windows else None
+
+    def attach(self, popout, key, width, origin=None):
+        """Napojí okno na ostrůvek: okno se přesune na správný monitor, ostrůvek naroste na jeho šířku."""
+        bw = self.window_for(origin)
+        if bw is None:
+            return None
+        if GtkLayerShell.is_supported():
+            if popout.attach and popout.attach[0] is not bw and popout.win.get_visible():
+                popout.win.hide()                           # jiný monitor: okno se musí znovu zobrazit
+            GtkLayerShell.set_monitor(popout.win, bw.monitor)
+        width = max(width, bw.natural_width(key))
+        bw.open(key, width)
+        return bw, key, width
+
+    # ------------------------------------------------------------ moduly
+    def mod(self, bw, island, name, click=None, *classes):
+        btn = css(Gtk.Button(), "flat", "bar-mod", f"bar-{name}", *classes)
+        btn.set_can_focus(False)
+        lab = label("", "bar-text")
+        btn.add(lab)
+        if click:
+            btn.connect("clicked", lambda *_: click(bw))
+        bw.mods[name] = (btn, lab)
+        island.pack_start(btn, False, False, 0)
+        return btn
+
+    def build_modules(self, bw):
+        left, center, right = bw.inner["left"], bw.inner["center"], bw.inner["right"]
+        monitor = lambda _o: spawn("gnome-system-monitor")
+        net = lambda key: (lambda origin: self.app.net and self.app.net.toggle(key, origin=origin))
+        self.mod(bw, left, "cpu", monitor)
+        self.mod(bw, left, "ram", monitor)
+        self.mod(bw, left, "gpu", monitor)
+        self.mod(bw, left, "temp", None, "bar-plain")
+        self.mod(bw, left, "battery", None, "bar-plain")
+        self.mod(bw, center, "clock", lambda origin: self.app.panel.toggle(origin=origin))
+        self.mod(bw, right, "netspeed", net("wifi"))
+        self.mod(bw, right, "net", net("wifi"))
+        self.mod(bw, right, "disk", lambda _o: spawn("dolphin") if shutil.which("dolphin") else
+                 spawn("xdg-open", os.path.expanduser("~")))
+        self.mod(bw, right, "bt", net("bluetooth"))
+        self.mod(bw, right, "vpn", net("vpn"))
+        self.mod(bw, right, "power", lambda _o: spawn(os.path.expanduser("~/.config/rofi/powermenu/type-1/powermenu.sh")))
+
+    # ------------------------------------------------------------ data
+    @staticmethod
+    def vpn_name(name):
+        """proton-nl -> Proton · Netherlands (stejně jako dřív ve Waybaru)."""
+        provider, _, code = name.rpartition("-")
+        country = VpnPage.COUNTRIES.get(code.lower())
+        return f"{provider.capitalize()} · {country}" if provider and country else name
+
+    @staticmethod
+    def rate(value):
+        for unit in ("B/s", "kB/s", "MB/s", "GB/s"):
+            if value < 999.5 or unit == "GB/s":
+                return f"{value:.1f} {unit}" if value < 10 and unit != "B/s" else f"{value:.0f} {unit}"
+            value /= 1000
+
+    def net_speed(self):
+        down = up = 0
+        for line in read("/proc/net/dev").splitlines()[2:]:
+            name, _, data = line.partition(":")
+            if name.strip().startswith(NetStats.SKIP):
+                continue
+            fields = data.split()
+            if len(fields) > 8:
+                down += int(fields[0])
+                up += int(fields[8])
+        now = time.monotonic()
+        if self.net_last:
+            span = max(0.001, now - self.net_last[0])
+            self.net_rate = ((down - self.net_last[1]) / span, (up - self.net_last[2]) / span)
+        self.net_last = (now, down, up)
+        return self.net_rate
+
+    def values(self):
+        stats = self.app.panel.stats
+        out = {}
+        out["cpu"] = (f"{stats.cpu:.0f}% CPU", f"CPU usage: {stats.cpu:.0f}%\nCores: {os.cpu_count()}", None)
+        used, total, pct = stats.ram()
+        out["ram"] = (f"{pct:.0f}% RAM", f"RAM in use: {used:.1f}GiB / {total:.1f}GiB ({pct:.0f}%)", None)
+        self.gpu.sample()
+        g = self.gpu.usage
+        out["gpu"] = (f"{g:.0f}% GPU" if g is not None else "–% GPU",
+                      f"{self.gpu.name}\nGPU usage: {g:.0f}%" if g is not None else self.gpu.name,
+                      None if g is None else "critical" if g >= 90 else "warning" if g >= 70 else "normal")
+        try:
+            t = int(read(self.temp_path)) / 1000 if self.temp_path else None
+        except ValueError:
+            t = None
+        out["temp"] = (f"{t:.0f}°C " if t is not None else "", f"CPU temperature: {t:.0f}°C"
+                       if t is not None else "", "critical" if t and t >= 90 else "warning" if t and t >= 75 else None)
+        bat = stats.battery()
+        if bat:
+            cap, status = bat
+            if status == "Charging":
+                text, cls = f"{cap}% ", "charging"
+            elif status == "Not charging":
+                text, cls = f"{cap}% ", "plugged"
+            else:
+                icons = ["", "", "", "", ""]
+                text = f"{cap}% {icons[min(4, cap * 5 // 100)]}"
+                cls = "critical" if cap <= 15 else "warning" if cap <= 30 else None
+            out["battery"] = (text, f"Battery: {cap}%", cls)
+        else:
+            out["battery"] = ("", "", None)
+        out["clock"] = (time.strftime(BAR_CLOCK), None, None)
+        down, up = self.net_speed()
+        out["netspeed"] = (f" {self.rate(down)}    {self.rate(up)}",
+                           f"Download: {self.rate(down)}\nUpload: {self.rate(up)}", None)
+        net = self.state["net"]
+        if net is None or net[0] == "wifi":
+            name, strength = (net[1], net[2]) if net else ("", 0)
+            out["net"] = (f"{strength}% ", f" {name} ({strength}%)", None)
+        elif net[0] == "ethernet":
+            out["net"] = (f"{net[1]} \U000f0200", f"{net[1]}", None)
+        else:
+            out["net"] = (" Disconnected", "Disconnected", "disconnected")
+        vpn = self.state["vpn"]
+        out["vpn"] = ("", f"VPN on: {vpn[0]}\nYour IP is hidden" if vpn else "VPN off\nYour IP is visible",
+                      "on" if vpn else "off")
+        bt = self.state["bt"]
+        if bt is None or not bt[0]:
+            out["bt"] = ("", "Bluetooth off", "off")
+        elif bt[1]:
+            out["bt"] = ("", " " + ", ".join(bt[1]), "connected")
+        else:
+            out["bt"] = ("", "Bluetooth on", None)
+        try:
+            st = os.statvfs("/")
+            free, size = st.f_bavail * st.f_frsize, st.f_blocks * st.f_frsize
+            out["disk"] = ("", f"Free space: {free / 2 ** 30:.1f}GiB / {size / 2 ** 30:.1f}GiB "
+                           f"({100 * free / size:.0f}%)", None)
+        except (OSError, ZeroDivisionError):
+            out["disk"] = ("", "", None)
+        out["power"] = ("⏻", "Power menu", None)
+        return out
+
+    def apply(self, bw, values=None):
+        values = values or self.values()
+        for name, (text, tip, cls) in values.items():
+            if name not in bw.mods:
+                continue
+            btn, lab = bw.mods[name]
+            if lab.get_text() != text:
+                lab.set_text(text)
+            btn.set_visible(bool(text))
+            if tip and btn.get_tooltip_text() != tip:
+                btn.set_tooltip_text(tip)
+            for c in ("warning", "critical", "charging", "plugged", "connected", "off", "on", "disconnected"):
+                set_class(btn, c, c == cls)
+
+    def refresh(self):
+        values = self.values()
+        for bw in self.windows:
+            self.apply(bw, values)
+        return True
+
+    def slow_refresh(self):
+        """Síť, VPN a Bluetooth: dotazy, které chvíli trvají, běží na pozadí."""
+        if self.busy:
+            return True
+        self.busy = True
+
+        def work():
+            net, vpn, bt = None, [], None
+            wireless = {}
+            for line in read("/proc/net/wireless").splitlines()[2:]:
+                name, _, rest = line.partition(":")
+                try:
+                    wireless[name.strip()] = min(100, round(float(rest.split()[1].rstrip(".")) * 100 / 70))
+                except (IndexError, ValueError):
+                    pass
+            for line in run("nmcli", "-t", "-f", "NAME,TYPE,DEVICE", "connection", "show", "--active").splitlines():
+                parts = split_terse(line)
+                if len(parts) < 3:
+                    continue
+                name, kind, dev = parts[:3]
+                if kind in ("wireguard", "vpn"):
+                    vpn.append(self.vpn_name(name))
+                elif kind == "802-11-wireless" and (net is None or net[0] != "wifi"):
+                    net = ("wifi", name, wireless.get(dev, 0))
+                elif kind == "802-3-ethernet" and net is None:
+                    net = ("ethernet", dev, 0)
+            if net is None:
+                net = ("down", "", 0)
+            try:
+                bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+                res = bus.call_sync("org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects",
+                                    None, GLib.VariantType("(a{oa{sa{sv}}})"), Gio.DBusCallFlags.NONE, 1500, None)
+                powered, devices = False, []
+                for _path, ifaces in res.unpack()[0].items():
+                    adapter = ifaces.get("org.bluez.Adapter1")
+                    if adapter:
+                        powered = powered or bool(adapter.get("Powered"))
+                    dev = ifaces.get("org.bluez.Device1")
+                    if dev and dev.get("Connected"):
+                        devices.append(dev.get("Alias") or dev.get("Name") or "device")
+                bt = (powered, devices)
+            except GLib.Error:
+                bt = None
+            GLib.idle_add(done, net, vpn, bt)
+
+        def done(net, vpn, bt):
+            self.busy = False
+            self.state.update(net=net, vpn=vpn, bt=bt)
+            self.refresh()
+            return False
+        threading.Thread(target=work, daemon=True).start()
+        return True
 
 
 class App(Gtk.Application):
@@ -6335,7 +7142,7 @@ class App(Gtk.Application):
                          flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.panel = self.trigger = self.side = self.center = self.edge = self.css_monitor = None
         self.server = self.toasts = self.icons = None
-        self.walls = self.picker = self.net = self.hypr_events = None
+        self.walls = self.picker = self.net = self.hypr_events = self.bar = None
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -6351,8 +7158,9 @@ class App(Gtk.Application):
         self.css_monitor.connect("changed", lambda _m, f, _o, ev: ev in (
             Gio.FileMonitorEvent.CHANGES_DONE_HINT, Gio.FileMonitorEvent.CREATED) and self.load_css(style))
         self.panel = Panel(self)
-        self.trigger = Trigger(self, self.panel, "island-panel-trigger", GtkLayerShell.Edge.TOP,
-                               TRIGGER_WIDTH, TRIGGER_HEIGHT)
+        if not BAR_ENABLED:          # s lištou panel otevírá ostrůvek s časem (i pruh nad ním)
+            self.trigger = Trigger(self, self.panel, "island-panel-trigger", GtkLayerShell.Edge.TOP,
+                                   TRIGGER_WIDTH, TRIGGER_HEIGHT)
         self.icons = IconIndex()
         self.server = NotificationServer(own=NOTIFICATIONS_ENABLED)
         if NOTIFICATIONS_ENABLED:
@@ -6375,6 +7183,8 @@ class App(Gtk.Application):
             self.walls.restore()                               # po přihlášení vrátit vybranou tapetu
             self.picker = WallpaperPicker(self, self.walls)
             GLib.timeout_add_seconds(5, self.walls.warm_up)    # náhledy připravit předem na pozadí
+        if BAR_ENABLED:
+            self.bar = Bar(self)
         self.hold()
 
     def do_shutdown(self):
