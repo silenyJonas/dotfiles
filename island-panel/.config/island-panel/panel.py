@@ -6885,6 +6885,7 @@ class Bar:
         self.gpu = Gpu()
         self.gpu.sample()
         self.state = {"net": None, "vpn": [], "bt": None}
+        self.ap_path, self.ap_strength = None, None      # připojená Wi-Fi síť a její síla (od NetworkManageru)
         self.busy = False
         self.net_last, self.net_rate = None, (0.0, 0.0)
         self.temp_path = self.TEMP_PATH if os.path.exists(self.TEMP_PATH) else find_temp_sensor()
@@ -6914,11 +6915,16 @@ class Bar:
         bus.signal_subscribe("org.freedesktop.NetworkManager", "org.freedesktop.NetworkManager", "StateChanged",
                              None, None, Gio.DBusSignalFlags.NONE, self.on_dbus_signal)
 
-    def on_dbus_signal(self, _bus, _sender, _path, _iface, member, params):
+    def on_dbus_signal(self, _bus, _sender, path, _iface, member, params):
         if member == "PropertiesChanged":
-            iface = params.unpack()[0] if params else ""
-            # síla signálu a statistiky chodí často a nic z nich nepotřebujeme (sílu čte refresh z /proc)
-            if iface.endswith((".AccessPoint", ".Statistics", ".Device.Wireless")):
+            iface, changed = (params.unpack()[:2] if params else ("", {}))
+            if iface.endswith(".AccessPoint"):
+                # síla signálu: jen u připojené sítě, bez dalšího dotazování
+                if path == self.ap_path and "Strength" in changed:
+                    self.ap_strength = int(changed["Strength"])
+                    self.refresh()
+                return
+            if iface.endswith((".Statistics", ".Device.Wireless")):
                 return
         if self.pending is None:                  # víc zpráv najednou = jeden dotaz
             self.pending = GLib.timeout_add(400, self.on_pending)
@@ -7018,6 +7024,28 @@ class Bar:
         return f"{provider.capitalize()} · {country}" if provider and country else name
 
     @staticmethod
+    def active_ap(dev):
+        """Připojená Wi-Fi síť přes D-Bus NetworkManageru: (cesta, síla 0–100). Funguje u všech ovladačů,
+        /proc/net/wireless u některých (třeba novějších Intel karet) zůstává prázdný."""
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            nm = "org.freedesktop.NetworkManager"
+            device = bus.call_sync(nm, "/org/freedesktop/NetworkManager", nm, "GetDeviceByIpIface",
+                                   GLib.Variant("(s)", (dev,)), GLib.VariantType("(o)"),
+                                   Gio.DBusCallFlags.NONE, 1500, None).unpack()[0]
+            ap = bus.call_sync(nm, device, "org.freedesktop.DBus.Properties", "Get",
+                               GLib.Variant("(ss)", (nm + ".Device.Wireless", "ActiveAccessPoint")),
+                               GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 1500, None).unpack()[0]
+            if not ap or ap == "/":
+                return None, None
+            strength = bus.call_sync(nm, ap, "org.freedesktop.DBus.Properties", "Get",
+                                     GLib.Variant("(ss)", (nm + ".AccessPoint", "Strength")),
+                                     GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 1500, None).unpack()[0]
+            return ap, int(strength)
+        except (GLib.Error, TypeError, ValueError):
+            return None, None
+
+    @staticmethod
     def wifi_strength(dev):
         """Síla Wi-Fi rovnou z jádra (/proc/net/wireless), levné čtení bez spouštění programů."""
         for line in read("/proc/net/wireless").splitlines()[2:]:
@@ -7087,7 +7115,9 @@ class Bar:
         out["clock"] = (time.strftime(BAR_CLOCK), None, None)
         net = self.state["net"]
         if net is None or net[0] == "wifi":
-            name, strength = (net[1], self.wifi_strength(net[3])) if net else ("", 0)
+            strength = self.ap_strength if self.ap_strength is not None else \
+                (self.wifi_strength(net[3]) if net else 0)
+            name = net[1] if net else ""
             out["net"] = (f"{strength}% ", f" {name} ({strength}%)", None)
         elif net[0] == "ethernet":
             out["net"] = (f"{net[1]} \U000f0200", f"{net[1]}", None)
@@ -7141,6 +7171,7 @@ class Bar:
 
         def work():
             net, vpn, bt = None, [], None
+            ap = (None, None)
             wireless = {}
             for line in read("/proc/net/wireless").splitlines()[2:]:
                 name, _, rest = line.partition(":")
@@ -7157,6 +7188,7 @@ class Bar:
                     vpn.append(self.vpn_name(name))
                 elif kind == "802-11-wireless" and (net is None or net[0] != "wifi"):
                     net = ("wifi", name, wireless.get(dev, 0), dev)
+                    ap = self.active_ap(dev)
                 elif kind == "802-3-ethernet" and net is None:
                     net = ("ethernet", dev, 0)
             if net is None:
@@ -7176,10 +7208,11 @@ class Bar:
                 bt = (powered, devices)
             except GLib.Error:
                 bt = None
-            GLib.idle_add(done, net, vpn, bt)
+            GLib.idle_add(done, net, vpn, bt, ap)
 
-        def done(net, vpn, bt):
+        def done(net, vpn, bt, ap):
             self.busy = False
+            self.ap_path, self.ap_strength = ap
             self.state.update(net=net, vpn=vpn, bt=bt)
             self.refresh()
             return False
