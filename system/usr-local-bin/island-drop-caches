@@ -1,0 +1,4 @@
+#!/bin/sh
+# Zapíše rozpracovaná data na disk a zahodí mezipaměť souborů. Nic se tím neztratí.
+sync
+echo 3 > /proc/sys/vm/drop_caches

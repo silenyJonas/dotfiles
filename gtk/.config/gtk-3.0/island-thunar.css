@@ -1,0 +1,102 @@
+/* Thunar v černobílém stylu: poloprůhledné černé okno (pod ním rozmazání z Hyprlandu), text plně krytý */
+window.thunar {
+  background-color: rgba(12, 12, 12, 0.72);
+}
+
+window.thunar .view,
+window.thunar iconview,
+window.thunar treeview,
+window.thunar treeview.view,
+window.thunar .sidebar,
+window.thunar .shortcuts-pane,
+window.thunar .standard-view,
+window.thunar scrolledwindow,
+window.thunar viewport,
+window.thunar notebook,
+window.thunar notebook > stack,
+window.thunar notebook > header,
+window.thunar paned,
+window.thunar toolbar,
+window.thunar box,
+window.thunar menubar,
+window.thunar statusbar {
+  background-color: transparent;
+  background-image: none;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+window.thunar .sidebar,
+window.thunar .shortcuts-pane {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+window.thunar toolbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 4px 6px;
+}
+
+window.thunar paned > separator {
+  background: rgba(255, 255, 255, 0.06);
+  min-width: 1px;
+}
+
+window.thunar entry {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: none;
+  color: #e6e6e6;
+}
+
+window.thunar entry:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+window.thunar toolbar button {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 8px;
+}
+
+window.thunar toolbar button:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+window.thunar *:selected,
+window.thunar iconview:selected,
+window.thunar .view:selected,
+window.thunar treeview.view:selected {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+window.thunar .view,
+window.thunar iconview,
+window.thunar treeview,
+window.thunar label {
+  color: #e6e6e6;
+}
+
+window.thunar .sidebar label,
+window.thunar treeview.view header button {
+  color: #c2c2c2;
+}
+
+window.thunar scrollbar {
+  background: transparent;
+  border: none;
+}
+
+window.thunar scrollbar slider {
+  background: rgba(255, 255, 255, 0.18);
+  min-width: 6px;
+  border-radius: 6px;
+}
+
+window.thunar rubberband,
+window.thunar .rubberband {
+  background-color: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+}

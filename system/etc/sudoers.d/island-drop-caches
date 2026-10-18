@@ -1,0 +1,1 @@
+joncl ALL=(root) NOPASSWD: /usr/local/bin/island-drop-caches
