@@ -105,6 +105,16 @@ QUICK_APPS = ["brave-browser|com.brave.Browser", "com.spotify.Client", "codium|c
               "dev.vencord.Vesktop"]
 # Aplikace, které se mají spouštět vlastním příkazem místo toho z jejich .desktop souboru
 APP_COMMANDS = {"codium": "codium --ozone-platform=wayland"}
+# Další slova, podle kterých jde aplikaci najít v záložce Apps (id aplikace -> slova)
+APP_ALIASES = {
+    "ai.storyteller.photocraft": "photoshop adobe obrázky fotky",
+    "ai.storyteller.filmcraft": "premiere pro adobe video střih",
+    "ai.storyteller.vectorcraft": "illustrator adobe vektory svg",
+    "ai.storyteller.effectcraft": "after effects adobe animace efekty",
+    "ai.storyteller.lightcraft": "lightroom adobe raw fotky",
+    "ai.storyteller.designcraft": "indesign adobe sazba tisk",
+    "ai.storyteller.pdfcraft": "acrobat adobe pdf",
+}
 LOCK_COMMAND = "~/.config/hypr/lock/lock.py"   # zamykací obrazovka; když soubor chybí, zkusí se hyprlock, swaylock
 # vlastní jméno a ikona v rychlých aplikacích: id aplikace -> (jméno, [ikony k vyzkoušení])
 QUICK_APP_LOOK = {
@@ -2138,8 +2148,12 @@ class Panel(AutoHide):
             item.pack_start(label(app.get_display_name() or "", "app-name", ellipsize=True, lines=2), False, False, 0)
             child = Gtk.FlowBoxChild()
             child.app = app
+            extra = []
+            if isinstance(app, Gio.DesktopAppInfo):
+                extra = [app.get_generic_name()] + list(app.get_keywords() or [])
             child.keywords = " ".join(filter(None, [
-                app.get_display_name(), app.get_name(), app.get_executable(), app.get_description()])).lower()
+                app.get_display_name(), app.get_name(), app.get_executable(), app.get_description(),
+                APP_ALIASES.get(app_key(app), ""), *extra])).lower()
             child.add(item)
             self.flow.add(child)
         self.flow.show_all()

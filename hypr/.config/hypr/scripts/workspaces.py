@@ -121,9 +121,13 @@ def compact():
             for c in clients:
                 if c["workspace"]["id"] == src:
                     batch.append(f"dispatch movetoworkspacesilent {dst},address:{c['address']}")
+            # Plocha s novým číslem vznikne na monitoru s fokusem, ne na tomhle. Když je fokus na druhé
+            # obrazovce, okna by na ni přeskočila, proto plochu hned vrátit na její monitor.
+            batch.append(f"dispatch moveworkspacetomonitor {dst} {mon}")
             if active.get(mon) == src:
                 follow = dst
         if follow is not None:
+            batch.append(f"dispatch focusmonitor {mon}")
             batch.append(f"dispatch workspace {follow}")   # zůstat u svých oken
         if focused and focused != mon:
             batch.append(f"dispatch focusmonitor {focused}")
