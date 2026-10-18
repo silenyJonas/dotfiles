@@ -1,5 +1,6 @@
 com.discordapp.Discord
 com.jetbrains.PyCharm-Community
+com.obsproject.Studio
 com.spotify.Client
 com.visualstudio.code
 dev.neovide.neovide

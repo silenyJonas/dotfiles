@@ -255,8 +255,8 @@ V seznamech nejsou programy nainstalované jinou cestou. Ty je potřeba doinstal
 - XAMPP (`/opt/lampp`), Mailpit, Postman (`~/Apps/Postman`)
 - nástroje z `pip` (`~/.local/bin`) a `cargo` (`~/.cargo/bin`)
 - Spicetify (`~/.spicetify`) a jeho témata, viz Obnova
-- Yazi na Fedoře 42 (`~/.local/bin/yazi`, `ya`)
-- hyprlock a hypridle na Fedoře 42 (`/opt/island-hypr`)
+- Yazi (`cargo install --locked yazi-fm yazi-cli`)
+- hyprlock a hypridle: z COPR `lionheartp/Hyprland` (`sudo dnf install hyprlock hypridle`)
 - `mpvpaper` pro animované tapety (volitelné, ze zdrojáků `GhostNaN/mpvpaper`)
 - VPN profily (naimportovat znovu ze záloh v `~/.local/share/island-vpn`, ty nejsou v repozitáři)
 
