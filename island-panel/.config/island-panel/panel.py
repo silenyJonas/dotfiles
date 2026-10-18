@@ -764,7 +764,7 @@ class SpinArt(Art):
         cr.scale(scale, scale)
         c, r = size / 2, size / 2 - 1
         cr.arc(c, c, r, 0, 2 * math.pi)
-        cr.set_source_rgb(0.04, 0.07, 0.09)
+        cr.set_source_rgb(0.03, 0.03, 0.03)
         cr.fill()
         cr.set_line_width(0.6)
         for i in range(9):                    # drážky
@@ -799,7 +799,7 @@ class SpinArt(Art):
             PangoCairo.show_layout(cr, layout)
         cr.restore()
         cr.arc(c, c, r * 0.045, 0, 2 * math.pi)   # dírka uprostřed
-        cr.set_source_rgb(0.04, 0.07, 0.09)
+        cr.set_source_rgb(0.03, 0.03, 0.03)
         cr.fill()
         return surface
 
@@ -4191,7 +4191,7 @@ class Trigger:
 # ----------------------------------------------------------------------------
 THUMB_H = 2 * max(WALL_BIG_H, WALL_CARD_H)   # výška náhledů uložených v mezipaměti (ostré i na HiDPI displeji)
 THUMB_MAX_W = THUMB_H * 8 // 3
-WALL_SHADE_COLOR = (0.02, 0.07, 0.10)
+WALL_SHADE_COLOR = (0.0, 0.0, 0.0)
 PICTURE_EXTS = {".jpg", ".jpeg", ".jpe", ".png", ".webp", ".avif", ".bmp", ".gif", ".tif", ".tiff",
                 ".jxl", ".heic", ".heif"}
 VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi"}
@@ -5087,7 +5087,7 @@ class WallpaperPicker:
     # --- kreslení ---
     def draw_dim(self, _win, cr):
         cr.set_operator(cairo.OPERATOR_SOURCE)
-        cr.set_source_rgba(0.01, 0.04, 0.06, WALL_DIM)
+        cr.set_source_rgba(0.0, 0.0, 0.0, WALL_DIM)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
         return False
@@ -6994,7 +6994,6 @@ class Bar:
         self.mod(bw, left, "temp", None, "bar-plain")
         self.mod(bw, left, "battery", None, "bar-plain")
         self.mod(bw, center, "clock", lambda origin: self.app.panel.toggle(origin=origin))
-        self.mod(bw, right, "netspeed", net("wifi"))
         self.mod(bw, right, "net", net("wifi"))
         self.mod(bw, right, "disk", lambda _o: spawn("dolphin") if shutil.which("dolphin") else
                  spawn("xdg-open", os.path.expanduser("~")))
@@ -7078,9 +7077,6 @@ class Bar:
         else:
             out["battery"] = ("", "", None)
         out["clock"] = (time.strftime(BAR_CLOCK), None, None)
-        down, up = self.net_speed()
-        out["netspeed"] = (f" {self.rate(down)}    {self.rate(up)}",
-                           f"Download: {self.rate(down)}\nUpload: {self.rate(up)}", None)
         net = self.state["net"]
         if net is None or net[0] == "wifi":
             name, strength = (net[1], self.wifi_strength(net[3])) if net else ("", 0)

@@ -1,0 +1,1252 @@
+/*
+ * Vzhled Island panelu. Barvy jsou stejné jako u ostrůvků ve Waybaru.
+ * Změny se načtou samy po uložení souboru.
+ */
+
+/* === Barvy (stačí měnit tady) === */
+@define-color island        rgba(10, 30, 44, 0.93);    /* pozadí panelu, poslední číslo = průhlednost */
+@define-color island_border rgba(125, 190, 220, 0.25); /* tenký okraj */
+@define-color tile          rgba(255, 255, 255, 0.055);/* dlaždice uvnitř panelu */
+@define-color hover         rgba(255, 255, 255, 0.10);
+@define-color fg            #dbe7ee;
+@define-color fg_dim        #7f97a5;
+@define-color pill          #e6eef2;                   /* světlá pilulka jako vypínač v liště */
+@define-color pill_fg       #0a1e2c;
+@define-color accent        #7dbedc;
+@define-color bad           #bf616a;
+@define-color good          #a3be8c;
+@define-color warn          #ebcb8b;
+
+/* === Základ === */
+* {
+  /* písmo textů; ikony se berou z Nerd Fontu za čárkou */
+  font-family: "Nunito", "JetbrainsMono Nerd Font";
+  font-size: 14px;
+  font-feature-settings: "tnum";   /* číslice stejně široké, čísla při změně neposkakují */
+  outline: none;
+}
+
+window {
+  background: transparent;
+}
+
+#panel {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 16px;
+  margin: 6px 4px 14px 4px;
+  padding: 6px 12px 12px 12px;
+  color: @fg;
+}
+
+label {
+  color: @fg;
+}
+
+.dim {
+  color: @fg_dim;
+}
+
+/* tlačítka bez výchozího vzhledu GTK */
+button.flat {
+  background: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  text-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  color: @fg;
+}
+
+/* === Záložky === */
+.tabs {
+  border-bottom: 1px solid alpha(@fg, 0.08);
+}
+
+button.tab {
+  padding: 8px 0 7px 0;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 150ms ease;
+}
+
+button.tab label {
+  color: @fg_dim;
+  transition: color 150ms ease;
+}
+
+button.tab .tab-icon {
+  font-size: 16px;
+}
+
+button.tab:hover label,
+button.tab.active label {
+  color: @fg;
+}
+
+.tab-indicator {
+  color: @fg;          /* čára pod aktivní záložkou (přejíždí) */
+}
+
+/* === Dlaždice === */
+.tile {
+  background: @tile;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+/* --- počasí --- */
+.weather-icon {
+  font-size: 34px;
+}
+
+.weather-temp {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* --- systém --- */
+.logo {
+  font-size: 30px;
+  color: @accent;
+  padding: 0 4px;
+}
+
+/* --- hodiny --- */
+.clock-digits {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.clock-dots {
+  color: @fg_dim;
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+/* --- kalendář --- */
+.calendar {
+  padding: 10px 12px;
+}
+
+.cal-title {
+  font-weight: bold;
+}
+
+button.cal-nav {
+  padding: 4px 9px;
+  border-radius: 9px;
+  color: @fg_dim;
+}
+
+button.cal-nav:hover {
+  background: @hover;
+  color: @fg;
+}
+
+.cal-weekday {
+  color: @fg_dim;
+  padding: 3px 0;
+}
+
+.cal-day {
+  padding: 3px 0;
+  border-radius: 9px;
+}
+
+.cal-day.other {
+  color: alpha(@fg_dim, 0.5);
+}
+
+.cal-day.today {
+  background: @pill;
+  color: @pill_fg;
+  font-weight: bold;
+}
+
+/* --- kruhové ukazatele --- */
+.gauges {
+  padding: 8px 12px;
+}
+
+.gauge {
+  color: @fg;
+  font-size: 15px;
+}
+
+.gauge.big {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.gauge.high {
+  color: @bad;
+}
+
+.sparkline {
+  color: @accent;
+}
+
+/* --- přehrávač --- */
+.art {
+  color: @fg;
+}
+
+.media-title {
+  font-weight: bold;
+}
+
+.media-big-title {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.chip {
+  background: @hover;
+  border-radius: 9px;
+  padding: 2px 9px;
+  color: @fg_dim;
+  margin-bottom: 4px;
+}
+
+button.media-btn {
+  padding: 7px 12px;
+  border-radius: 11px;
+  background: @hover;
+  transition: background 150ms ease;
+}
+
+button.media-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.media-btn.primary {
+  background: @pill;
+  color: @pill_fg;
+  padding: 7px 16px;
+}
+
+button.media-btn.primary label {
+  color: @pill_fg;
+}
+
+button.media-btn.primary:hover {
+  background: #ffffff;
+}
+
+button.media-btn.large {
+  padding: 10px 18px;
+}
+
+button.media-btn.large.primary {
+  padding: 10px 24px;
+}
+
+.media-page {
+  padding: 16px 20px;
+}
+
+.spin-art {
+  color: @fg;
+}
+
+.gauge-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button.media-btn.wide {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+button.media-btn.toggle-btn label {
+  color: @fg_dim;
+}
+
+button.media-btn.toggle-btn.on label {
+  color: @accent;
+}
+
+button.media-btn.toggle-btn:disabled {
+  opacity: 0.35;
+}
+
+.others {
+  padding-top: 10px;
+  border-top: 1px solid alpha(@fg, 0.08);
+}
+
+button.other-player {
+  padding: 6px;
+  border-radius: 12px;
+  background: @tile;
+  transition: background 150ms ease;
+}
+
+button.other-player:hover {
+  background: @hover;
+}
+
+progressbar.progress trough {
+  background: alpha(@fg, 0.13);
+  border: none;
+  border-radius: 3px;
+  min-height: 5px;
+}
+
+progressbar.progress progress {
+  background: @fg;
+  border: none;
+  border-radius: 3px;
+  min-height: 5px;
+}
+
+/* --- výkon --- */
+.perf-card {
+  padding: 14px 16px;
+}
+
+.perf-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.perf-icon {
+  font-size: 22px;
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 12px;
+  background: @hover;
+  color: @accent;
+}
+
+progressbar.progress.thin trough,
+progressbar.progress.thin progress {
+  min-height: 4px;
+}
+
+progressbar.progress.thin progress {
+  background: @accent;
+}
+
+.badge-wave {
+  color: @accent;
+}
+
+.ring-gauge {
+  color: @accent;
+}
+
+.ring-gauge.high {
+  color: @bad;
+}
+
+.battery-card {
+  color: @fg;
+}
+
+.net-graph {
+  color: @accent;
+}
+
+button.mount-btn {
+  padding: 2px 10px;
+}
+
+/* --- aplikace --- */
+entry.search {
+  background: @tile;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 8px 12px;
+  color: @fg;
+  caret-color: @fg;
+  min-height: 0;
+}
+
+entry.search:focus {
+  border-color: @island_border;
+}
+
+entry.search image {
+  color: @fg_dim;
+  margin-right: 6px;
+}
+
+.apps-scroll {
+  padding: 6px;
+  min-height: 250px;
+}
+
+.apps-scroll,
+.apps-scroll viewport,
+flowbox {
+  background-image: none;
+}
+
+.apps-scroll viewport,
+flowbox {
+  background: transparent;
+}
+
+flowboxchild {
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+flowboxchild:hover {
+  background: @hover;
+}
+
+flowboxchild:selected {
+  background: alpha(@accent, 0.22);
+}
+
+.app-name {
+  font-size: 12px;
+}
+
+/* --- rychlé aplikace nad seznamem --- */
+.quick-apps {
+  padding: 10px 12px;
+}
+
+button.quick-app {
+  padding: 8px 6px;
+  border-radius: 12px;
+  min-width: 92px;
+  transition: background 120ms ease;
+}
+
+button.quick-app:hover {
+  background: @hover;
+}
+
+.app.favourite .app-name {
+  color: @accent;
+}
+
+scrollbar {
+  background: transparent;
+  border: none;
+}
+
+scrollbar slider {
+  background: alpha(@fg, 0.25);
+  border-radius: 4px;
+  min-width: 4px;
+  min-height: 24px;
+}
+
+/* === Boční panel: hlasitost a jas === */
+/* panel hlasitosti a jasu je přilepený k pravému okraji obrazovky; pozadí s vydutými přechody
+   do okraje kreslí panel sám (barvy @island a @island_border) */
+#side {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin: 20px 0 20px 14px;
+  padding: 9px;
+  color: @fg;
+}
+
+.vslider {
+  color: @fg;
+}
+
+/* === Ovládací centrum u pravého okraje === */
+/* ovládací centrum: přilepené k pravému okraji obrazovky (pozadí kreslí panel sám) */
+#center {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin: 20px 0 20px 0;
+  padding: 14px 12px 12px 12px;
+  color: @fg;
+}
+
+#center scrolledwindow,
+#center viewport {
+  background: transparent;
+}
+
+#center overshoot,
+#center undershoot {
+  background: none;
+}
+
+.section-title {
+  font-weight: bold;
+  padding: 0 2px;
+}
+
+.small {
+  font-size: 11px;
+}
+
+.empty {
+  padding: 12px 0;
+}
+
+/* --- sloupec vypnout / odhlásit --- */
+/* sloupec vypnout / odhlásit: přilepený zleva k ovládacímu centru (pozadí kreslí panel) */
+#session {
+  background: transparent;
+  border: none;
+  padding: 9px 8px 9px 9px;
+}
+
+button.session-btn {
+  padding: 0;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 12px;
+  background: @tile;
+  transition: background 150ms ease;
+}
+
+button.session-btn:hover {
+  background: alpha(@fg, 0.16);
+}
+
+.session-icon {
+  font-size: 18px;
+}
+
+button.session-btn.armed {
+  background: @bad;
+}
+
+button.session-btn.armed label {
+  color: #ffffff;
+}
+
+/* --- oznámení --- */
+button.chip-btn {
+  padding: 3px 10px;
+  border-radius: 9px;
+  background: @hover;
+}
+
+button.chip-btn label {
+  font-size: 12px;
+  color: @fg_dim;
+}
+
+button.chip-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.chip-btn:hover label {
+  color: @fg;
+}
+
+.notif-group {
+  padding: 10px;
+}
+
+.notif-app {
+  font-weight: bold;
+}
+
+.badge {
+  background: @pill;
+  color: @pill_fg;
+  border-radius: 9px;
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+button.notif-line {
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+
+button.notif-line:hover {
+  background: @hover;
+}
+
+button.close-btn {
+  padding: 3px 7px;
+  border-radius: 8px;
+}
+
+button.close-btn label {
+  color: @fg_dim;
+}
+
+button.close-btn:hover {
+  background: @bad;
+}
+
+button.close-btn:hover label {
+  color: #ffffff;
+}
+
+/* --- otevřená okna --- */
+.window-list {
+  padding: 4px;
+}
+
+.window-row {
+  padding-right: 4px;
+}
+
+button.window-btn {
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+button.window-btn:hover {
+  background: @hover;
+}
+
+/* --- rychlé přepínače --- */
+button.toggle {
+  padding: 13px 2px;
+  border-radius: 12px;
+  background: @tile;
+  transition: background 150ms ease;
+}
+
+button.toggle:hover {
+  background: alpha(@fg, 0.16);
+}
+
+button.toggle:disabled {
+  opacity: 0.35;
+}
+
+.toggle-icon {
+  font-size: 21px;
+}
+
+.toggle-label {
+  font-size: 10px;
+  color: @fg_dim;
+}
+
+button.toggle.on {
+  background: @pill;
+}
+
+button.toggle.on label {
+  color: @pill_fg;
+}
+
+/* === Bubliny s novými oznámeními === */
+#toasts {
+  margin: 0 0 14px 14px;
+}
+
+button.toast {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+button.toast:hover {
+  border-color: alpha(@accent, 0.7);
+}
+
+.toast-title {
+  font-weight: bold;
+}
+
+.toast-app {
+  font-size: 11px;
+}
+
+/* === Přepínač tapet === */
+#wall-bar {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 16px;
+  padding: 6px 8px;
+}
+
+button.wall-chip {
+  padding: 4px 12px;
+  border-radius: 11px;
+  transition: background 150ms ease;
+}
+
+button.wall-chip label {
+  color: @fg_dim;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+button.wall-chip:hover {
+  background: @hover;
+}
+
+button.wall-chip:hover label {
+  color: @fg;
+}
+
+button.wall-chip.active {
+  background: @pill;
+}
+
+button.wall-chip.active label {
+  color: @pill_fg;
+}
+
+button.wall-icon {
+  padding: 4px 10px;
+  border-radius: 11px;
+}
+
+button.wall-icon label {
+  color: @fg_dim;
+}
+
+button.wall-icon:hover {
+  background: @hover;
+}
+
+button.wall-icon:hover label {
+  color: @fg;
+}
+
+.wall-sep {
+  min-width: 1px;
+  background: alpha(@fg, 0.10);
+  margin: 4px 2px;
+}
+
+/* barevné čtverečky: barvu samotnou nastavuje panel.py */
+button.wall-swatch {
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  background-image: none;
+  box-shadow: none;
+  transition: border-color 120ms ease;
+}
+
+button.wall-swatch:hover {
+  border-color: alpha(@fg, 0.55);
+}
+
+button.wall-swatch.active {
+  border-color: @fg;
+}
+
+button.wall-swatch:disabled {
+  opacity: 0.2;
+}
+
+.wall-query {
+  color: @accent;
+  padding: 0 4px;
+}
+
+.wall-count {
+  background: @tile;
+  border-radius: 9px;
+  padding: 3px 10px;
+  font-weight: bold;
+}
+
+#wall-caption {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 14px;
+  padding: 7px 18px;
+}
+
+.wall-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.wall-hint {
+  background: alpha(@island, 0.6);
+  border-radius: 10px;
+  padding: 4px 14px;
+  color: alpha(@fg, 0.8);
+  font-size: 11px;
+}
+
+/* === Wi-Fi a Bluetooth === */
+#net {
+  background: @island;
+  border: 1px solid @island_border;
+  border-radius: 16px;
+  margin: 0 0 12px 12px;
+  padding: 10px;
+  color: @fg;
+}
+
+#net scrolledwindow,
+#net viewport {
+  background: transparent;
+}
+
+#net overshoot,
+#net undershoot {
+  background: none;
+}
+
+.net-row {
+  border-radius: 12px;
+}
+
+.net-row.open {
+  background: @tile;
+}
+
+button.net-item {
+  padding: 8px 10px;
+  border-radius: 12px;
+  transition: background 120ms ease;
+}
+
+button.net-item:hover {
+  background: @hover;
+}
+
+.net-icon {
+  font-size: 15px;
+  min-width: 18px;
+  color: @fg_dim;
+}
+
+.net-bars {
+  color: @fg;
+}
+
+.net-name.active {
+  font-weight: bold;
+}
+
+.net-lock {
+  color: @fg_dim;
+  font-size: 11px;
+}
+
+.net-check {
+  color: @accent;
+}
+
+.net-details {
+  padding: 2px 10px 10px 10px;
+}
+
+entry.net-entry {
+  background: alpha(@fg, 0.07);
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 6px 10px;
+  color: @fg;
+  caret-color: @fg;
+  min-height: 0;
+}
+
+entry.net-entry:focus {
+  border-color: @island_border;
+}
+
+button.net-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: @hover;
+  transition: background 150ms ease;
+}
+
+button.net-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.net-btn.primary {
+  background: @pill;
+}
+
+button.net-btn.primary label {
+  color: @pill_fg;
+  font-weight: bold;
+}
+
+button.net-btn.primary:hover {
+  background: #ffffff;
+}
+
+button.net-btn:disabled {
+  opacity: 0.5;
+}
+
+.net-error {
+  color: @bad;
+}
+
+button.net-more {
+  padding: 4px 8px;
+  border-radius: 9px;
+}
+
+button.net-more:hover {
+  background: @hover;
+}
+
+/* tlačítko hledání, když zrovna hledá */
+button.wall-icon.busy {
+  opacity: 1;
+}
+
+button.wall-icon.busy label {
+  color: @accent;
+}
+
+/* vypínač vpravo nahoře */
+switch.net-switch {
+  background: alpha(@fg, 0.14);
+  background-image: none;
+  border: none;
+  border-radius: 12px;
+  box-shadow: none;
+  min-width: 40px;
+  min-height: 22px;
+  transition: background 150ms ease;
+}
+
+switch.net-switch:checked {
+  background: @pill;
+}
+
+switch.net-switch:disabled {
+  opacity: 0.4;
+}
+
+switch.net-switch image {
+  color: transparent;
+}
+
+switch.net-switch slider {
+  background: @fg;
+  background-image: none;
+  border: none;
+  border-radius: 10px;
+  box-shadow: none;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 2px;
+}
+
+switch.net-switch:checked slider {
+  background: @pill_fg;
+}
+
+/* --- VPN --- */
+.vpn-card {
+  padding: 10px 12px;
+  margin-bottom: 2px;
+}
+
+.vpn-icon {
+  font-size: 22px;
+  min-width: 34px;
+  color: @fg_dim;
+}
+
+.vpn-icon.on {
+  color: @accent;
+}
+
+.vpn-child {
+  margin-left: 22px;
+}
+
+.vpn-caret {
+  transition: none;
+  padding: 0 4px;
+}
+
+.vpn-caret.open {
+  color: @accent;
+}
+
+/* --- režimy výkonu --- */
+.power-card {
+  padding: 10px;
+}
+
+button.power-mode {
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: @hover;
+  transition: background 150ms ease;
+}
+
+button.power-mode:hover {
+  background: alpha(@fg, 0.18);
+}
+
+button.power-mode .power-icon {
+  color: @accent;
+  font-size: 14px;
+  min-width: 16px;
+}
+
+button.power-mode .power-name {
+  font-size: 12.5px;
+}
+
+button.power-mode.on {
+  background: @pill;
+}
+
+button.power-mode.on label {
+  color: @pill_fg;
+}
+
+button.power-mode:disabled {
+  opacity: 0.7;
+}
+
+/* --- nahrávání OBS (nahoře v ovládacím centru) --- */
+.rec-card {
+  padding: 10px 12px;
+  background: alpha(@bad, 0.16);
+  border: 1px solid alpha(@bad, 0.35);
+}
+
+.rec-card.paused {
+  background: alpha(#ebcb8b, 0.12);
+  border-color: alpha(#ebcb8b, 0.35);
+}
+
+.rec-dot {
+  color: @bad;
+  font-size: 14px;
+  min-width: 22px;
+}
+
+.rec-card.paused .rec-dot {
+  color: #ebcb8b;
+}
+
+.rec-title {
+  font-weight: bold;
+}
+
+.rec-time {
+  color: @fg_dim;
+  font-size: 12px;
+}
+
+button.rec-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+  background: @hover;
+}
+
+button.rec-btn:hover {
+  background: alpha(@fg, 0.2);
+}
+
+button.rec-btn.rec-stop {
+  background: @pill;
+}
+
+button.rec-btn.rec-stop label {
+  color: @bad;
+}
+
+.rec-card.stopping {
+  background: alpha(@fg, 0.06);
+  border-color: alpha(@fg, 0.18);
+}
+
+.rec-card.saved {
+  background: alpha(#a3be8c, 0.14);
+  border-color: alpha(#a3be8c, 0.35);
+}
+
+.rec-card.saved .rec-dot {
+  color: #a3be8c;
+}
+
+.rec-spin {
+  color: @fg;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 0 3px;
+}
+
+button.rec-btn:disabled {
+  opacity: 0.4;
+}
+
+.cache-card {
+  padding: 10px 8px;
+}
+
+.cache-card label {
+  font-size: 12px;
+}
+
+label.cache-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button.cache-btn {
+  margin-top: 2px;
+  min-height: 26px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: @pill;
+}
+
+button.cache-btn label {
+  color: @pill_fg;
+  font-weight: bold;
+}
+
+button.cache-btn:hover {
+  background: alpha(@pill, 0.85);
+}
+
+button.cache-btn:disabled {
+  background: @hover;
+}
+
+button.cache-btn:disabled label {
+  color: @fg;
+}
+
+/* === Lišta nahoře (místo Waybaru): vypadá stejně jako dřívější Waybar === */
+@define-color bar_island rgba(10, 30, 44, 0.80);   /* pozadí ostrůvků lišty (při otevření přejde do @island) */
+
+.bar-bg {
+  background: transparent;
+}
+
+button.bar-mod,
+button.bar-mod label {
+  font-family: "Nunito", "JetbrainsMono Nerd Font";
+  font-size: 14px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  color: @fg;
+}
+
+button.bar-mod {
+  min-height: 0;
+  min-width: 0;
+  padding: 3px 9px;
+  margin: 0 1px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+button.bar-mod:hover {
+  background: @hover;
+}
+
+/* teplota, baterie a rychlost sítě se pod myší nepodsvěcují (jako dřív) */
+button.bar-mod.bar-plain:hover,
+button.bar-netspeed:hover {
+  background: transparent;
+}
+
+button.bar-battery {
+  margin-left: 9px;
+}
+
+button.bar-battery.charging label,
+button.bar-battery.plugged label,
+button.bar-bt.connected label {
+  color: @good;
+}
+
+button.bar-battery.warning label {
+  color: @warn;
+}
+
+button.bar-battery.critical label,
+button.bar-temp.critical label,
+button.bar-net.disconnected label {
+  color: @bad;
+}
+
+button.bar-bt.off label,
+button.bar-vpn.off label {
+  color: @fg_dim;
+}
+
+button.bar-vpn.on label {
+  color: #7dbedc;
+}
+
+button.bar-netspeed label {
+  color: @fg_dim;
+  font-size: 12px;
+}
+
+/* tlačítko vypnutí: světlá pilulka na konci */
+button.bar-power {
+  background: @pill;
+  margin-left: 7px;
+  padding: 3px 11px;
+}
+
+button.bar-power label {
+  color: @pill_fg;
+  font-size: 12.5px;
+}
+
+button.bar-power:hover {
+  background: @bad;
+}
+
+button.bar-power:hover label {
+  color: @fg;
+}
+
+/* okna, která vyrůstají z ostrůvku: nahoře rovná a bez horní hrany, napojená na lištu */
+#panel.attached {
+  margin: 0 0 14px 0;
+  border-top-width: 0;
+  border-radius: 0 0 16px 16px;
+}
+
+#net.attached {
+  margin: 0 0 12px 0;
+  border-top-width: 0;
+  border-radius: 0 0 16px 16px;
+}
+
+/* bubliny s nápovědou (jako dřív u Waybaru) */
+tooltip {
+  background: rgba(10, 30, 44, 0.95);
+  border: 1px solid @island_border;
+  border-radius: 10px;
+}
+
+tooltip label {
+  color: @fg;
+  padding: 2px 4px;
+}

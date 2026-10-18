@@ -41,14 +41,14 @@ PLACEHOLDER = "Password"
 FETCH = ""
 
 # barvy Islandu (rgba v šestnáctkové soustavě: RRGGBBAA)
-CARD = "0a1e2cd9"
-BORDER = "7dbedc40"
+CARD = "000000d9"
+BORDER = "ffffff1a"
 TILE = "ffffff0e"
-FG = "dbe7eeff"
-DIM = "7f97a5ff"
-ACCENT = "7dbedcff"
-PILL = "e6eef2ff"
-BAD = "bf616aff"
+FG = "ffffffff"
+DIM = "a0a0a0ff"
+ACCENT = "ffffffff"
+PILL = "ffffffff"
+BAD = "ff003cff"
 
 
 def monitors():
@@ -163,9 +163,9 @@ class Layout:
         self.add("input-field", size=f"{self.px(290)}, {self.px(46)}", outline_thickness=self.px(1),
                  dots_size=0.28, dots_spacing=0.35, dots_center="true", dots_rounding=-1,
                  outer_color=f"rgba({BORDER})", inner_color=f"rgba({TILE})", font_color=f"rgba({FG})",
-                 font_family=FONT, fade_on_empty="false", placeholder_text=f"<span foreground='##7f97a5'>{PLACEHOLDER}</span>",
+                 font_family=FONT, fade_on_empty="false", placeholder_text=f"<span foreground='##a0a0a0'>{PLACEHOLDER}</span>",
                  hide_input="false", rounding=-1, check_color=f"rgba({ACCENT})", fail_color=f"rgba({BAD})",
-                 fail_text="<i>$FAIL</i>", capslock_color="rgba(ebcb8bff)",
+                 fail_text="<i>$FAIL</i>", capslock_color="rgba(ffd166ff)",
                  position=f"{self.px(self.ox + cx - self.cx)}, {-self.px(self.oy + 448)}", halign="center",
                  valign="top", zindex=3)
         self.text(cx, 508, f"  {getpass.getuser()}", 12, DIM, align="center")
@@ -231,7 +231,7 @@ animations {{
         parts.append(f"""background {{
     monitor = {name}
     path = {bg}
-    color = rgba(0a1e2cff)
+    color = rgba(000000ff)
     blur_passes = {BLUR}
     blur_size = 6
     brightness = 0.75

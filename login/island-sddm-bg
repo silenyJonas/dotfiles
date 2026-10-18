@@ -45,7 +45,7 @@ def to_jpeg(src, dst):
                                    GdkPixbuf.InterpType.HYPER)
         if pix.get_has_alpha():
             pix = pix.composite_color_simple(pix.get_width(), pix.get_height(), GdkPixbuf.InterpType.NEAREST,
-                                             255, 32, 0x0a1e2c, 0x0a1e2c)
+                                             255, 32, 0x000000, 0x000000)
         pix.savev(dst, "jpeg", ["quality"], ["92"])
         return True
     except Exception as err:

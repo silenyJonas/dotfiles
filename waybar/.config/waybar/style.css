@@ -5,16 +5,16 @@
  */
 
 /* === Barvy (stačí měnit tady) === */
-@define-color island        rgba(10, 30, 44, 0.80);    /* pozadí ostrůvku, poslední číslo = průhlednost */
-@define-color island_border rgba(125, 190, 220, 0.25); /* tenký okraj ostrůvku */
-@define-color fg            #dbe7ee;                   /* text a ikony */
-@define-color fg_dim        #7f97a5;                   /* neaktivní / ztlumené */
+@define-color island        rgba(0, 0, 0, 0.80);    /* pozadí ostrůvku, poslední číslo = průhlednost */
+@define-color island_border rgba(255, 255, 255, 0.25); /* tenký okraj ostrůvku */
+@define-color fg            #ffffff;                   /* text a ikony */
+@define-color fg_dim        #a0a0a0;                   /* neaktivní / ztlumené */
 @define-color hover         rgba(255, 255, 255, 0.10); /* podsvícení pod myší */
-@define-color pill          #e6eef2;                   /* světlá pilulka (tlačítko vypnutí) */
-@define-color pill_fg       #0a1e2c;
-@define-color good          #a3be8c;
-@define-color warn          #ebcb8b;
-@define-color bad           #bf616a;
+@define-color pill          #ffffff;                   /* světlá pilulka (tlačítko vypnutí) */
+@define-color pill_fg       #000000;
+@define-color good          #00ff9c;
+@define-color warn          #ffd166;
+@define-color bad           #ff003c;
 
 /* === Základ === */
 * {
@@ -192,7 +192,7 @@ window#waybar.hidden {
 
 /* === Bubliny s nápovědou === */
 tooltip {
-  background: rgba(10, 30, 44, 0.95);
+  background: rgba(0, 0, 0, 0.95);
   border: 1px solid @island_border;
   border-radius: 10px;
 }
@@ -217,6 +217,6 @@ tooltip label {
 }
 
 #custom-vpn.on {
-  color: #7dbedc;
+  color: #ffffff;
 }
 

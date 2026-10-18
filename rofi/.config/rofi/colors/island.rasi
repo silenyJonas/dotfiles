@@ -5,16 +5,16 @@
 
 * {
     /* názvy, které používají všechna témata v této složce */
-    background:     #0A1E2CCC;   /* pozadí okna, stejné jako ostrůvek lišty */
+    background:     #000000CC;   /* pozadí okna, stejné jako ostrůvek lišty */
     background-alt: #FFFFFF12;   /* jemně světlejší pole uvnitř okna */
-    foreground:     #DBE7EEFF;   /* text a ikony */
-    selected:       #7DBEDC38;   /* vybraný řádek */
-    active:         #A3BE8CFF;   /* zapnuto / v pořádku */
-    urgent:         #BF616AFF;   /* vypnuto / pozor */
+    foreground:     #FFFFFFFF;   /* text a ikony */
+    selected:       #FFFFFF38;   /* vybraný řádek */
+    active:         #00FF9CFF;   /* zapnuto / v pořádku */
+    urgent:         #FF003CFF;   /* vypnuto / pozor */
 
     /* navíc pro styly "island" */
-    border-col:     #7DBEDC40;   /* tenký okraj okna, stejný jako u lišty */
-    foreground-dim: #7F97A5FF;   /* ztlumený text */
-    pill:           #E6EEF2FF;   /* světlá pilulka, jako tlačítko vypnutí v liště */
-    pill-text:      #0A1E2CFF;
+    border-col:     #FFFFFF40;   /* tenký okraj okna, stejný jako u lišty */
+    foreground-dim: #A0A0A0FF;   /* ztlumený text */
+    pill:           #FFFFFFFF;   /* světlá pilulka, jako tlačítko vypnutí v liště */
+    pill-text:      #000000FF;
 }

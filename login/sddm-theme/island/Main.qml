@@ -7,20 +7,20 @@ Rectangle {
     id: root
     width: 1440
     height: 900
-    color: "#0a1e2c"
+    color: "#000000"
 
     // jednotka velikosti: na 1440×900 je 1, větší obrazovka = vše úměrně větší
     readonly property real u: Math.max(0.6, Math.min(width / 1440, height / 900))
-    readonly property color fg: "#dbe7ee"
-    readonly property color dim: "#9fb3bf"
-    readonly property color accent: config.accent || "#8fcdeb"
-    readonly property color pill: "#e6eef2"
-    readonly property color pillFg: "#0a1e2c"
-    readonly property color card: Qt.rgba(10 / 255, 30 / 255, 44 / 255, 0.72)
-    readonly property color line: Qt.rgba(125 / 255, 190 / 255, 220 / 255, 0.25)
+    readonly property color fg: "#ffffff"
+    readonly property color dim: "#b0b0b0"
+    readonly property color accent: config.accent || "#ffffff"
+    readonly property color pill: "#ffffff"
+    readonly property color pillFg: "#000000"
+    readonly property color card: Qt.rgba(0, 0, 0, 0.72)
+    readonly property color line: Qt.rgba(1, 1, 1, 0.12)
     readonly property color tile: Qt.rgba(1, 1, 1, 0.07)
-    readonly property color bad: "#e08a93"
-    readonly property color warn: "#ebcb8b"
+    readonly property color bad: "#ff4d6d"
+    readonly property color warn: "#ffd166"
 
     property bool unlocked: false          // false = hodiny, true = přihlášení
     property var now: new Date()
@@ -164,7 +164,7 @@ Rectangle {
     }
     Rectangle {
         anchors.fill: parent
-        color: "#06121b"
+        color: "#000000"
         opacity: root.unlocked ? 0.45 : 0.22
         Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
     }
@@ -454,7 +454,7 @@ Rectangle {
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 180 } }
             radius: 18 * u
-            color: Qt.rgba(10 / 255, 30 / 255, 44 / 255, 0.92)
+            color: Qt.rgba(0, 0, 0, 0.92)
             border.width: Math.max(1, u)
             border.color: root.line
 
@@ -513,7 +513,7 @@ Rectangle {
         IconButton {
             visible: sddm.canPowerOff
             size: 36 * u; icon: ""; iconFont: root.iconFont; fg: root.fg
-            hoverColor: Qt.rgba(191 / 255, 97 / 255, 106 / 255, 0.55)
+            hoverColor: Qt.rgba(1, 0, 60 / 255, 0.55)
             onClicked: sddm.powerOff()
         }
     }

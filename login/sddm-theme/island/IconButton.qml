@@ -7,7 +7,7 @@ Rectangle {
     property string tip: ""
     property string iconFont: ""
     property real size: 34
-    property color fg: "#dbe7ee"
+    property color fg: "#ffffff"
     property color hoverColor: Qt.rgba(1, 1, 1, 0.12)
     signal clicked()
 

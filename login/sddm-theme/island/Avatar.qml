@@ -6,8 +6,8 @@ Item {
     property string source: ""
     property string name: ""
     property string fontName: ""
-    property color ring: "#8fcdeb"
-    property color fill: "#13344a"
+    property color ring: "#ffffff"
+    property color fill: "#1a1a1a"
     property bool loaded: false
 
     onSourceChanged: { loaded = false; if (source) canvas.loadImage(url()) ; canvas.requestPaint() }

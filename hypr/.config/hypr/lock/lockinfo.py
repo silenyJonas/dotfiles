@@ -25,7 +25,7 @@ CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.
 STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "island-panel")
 ART_CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "island-panel")
 
-FG, DIM, ACCENT, PILL, PILL_FG = "#dbe7ee", "#7f97a5", "#7dbedc", "#e6eef2", "#0a1e2c"
+FG, DIM, ACCENT, PILL, PILL_FG = "#ffffff", "#a0a0a0", "#ffffff", "#ffffff", "#000000"
 WEATHER_CITY = "Prague"   # pro které město se počasí stahuje (prázdné = odhad podle IP adresy)
 WEATHER_LABEL = "Praha"   # jak se město ukáže na zamykací obrazovce
 

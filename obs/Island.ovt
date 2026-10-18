@@ -10,24 +10,24 @@
 
 @OBSThemeVars {
     /* odstíny modré noci (od nejsvětlejší po nejtmavší) */
-    --grey1: #3d5a6c;
-    --grey2: #33505f;
-    --grey3: #2b4656;
-    --grey4: #213a49;
-    --grey5: #19313f;
-    --grey6: #132a38;
-    --grey7: #0e2230;
-    --grey8: #081824;
+    --grey1: #3a3a3a;
+    --grey2: #303030;
+    --grey3: #2a2a2a;
+    --grey4: #212121;
+    --grey5: #191919;
+    --grey6: #131313;
+    --grey7: #0d0d0d;
+    --grey8: #080808;
 
     /* akcent Islandu */
-    --blue1: #7dbedc;
-    --blue2: #5a9dbd;
-    --blue3: #3b7a99;
-    --blue4: #2c5f78;
-    --blue5: #1f465a;
-    --blue6: #163444;
+    --blue1: #ffffff;
+    --blue2: #d9d9d9;
+    --blue3: #8a8a8a;
+    --blue4: #5a5a5a;
+    --blue5: #3a3a3a;
+    --blue6: #242424;
 
-    --bg_window: #0a1e2c;
+    --bg_window: #000000;
     --bg_base: var(--grey6);
     --bg_preview: var(--grey8);
 
@@ -37,9 +37,9 @@
     --primary_dark: var(--blue4);
     --primary_darker: var(--blue5);
 
-    --text: #dbe7ee;
+    --text: #ffffff;
     --text_light: #ffffff;
-    --text_muted: #7f97a5;
+    --text_muted: #a0a0a0;
 
     /* zaoblené rohy jako v panelu */
     --border_radius: 8px;
@@ -81,7 +81,7 @@ QDockWidget::title {
 /* tlačítka Spustit streamování / nahrávání jako světlé pilulky */
 #streamButton:!hover:!pressed.state-active,
 #recordButton:!hover:!pressed.state-active {
-    background: #e6eef2;
-    color: #0a1e2c;
-    border-color: #e6eef2;
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
 }

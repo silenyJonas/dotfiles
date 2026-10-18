@@ -3,19 +3,21 @@
  * Změny se načtou samy po uložení souboru.
  */
 
-/* === Barvy (stačí měnit tady) === */
-@define-color island        rgba(10, 30, 44, 0.93);    /* pozadí panelu, poslední číslo = průhlednost */
-@define-color island_border rgba(125, 190, 220, 0.25); /* tenký okraj */
-@define-color tile          rgba(255, 255, 255, 0.055);/* dlaždice uvnitř panelu */
+/* === Barvy (stačí měnit tady) ===
+ * Černobílé schéma: černé poloprůhledné plochy (pod nimi rozmazání z Hyprlandu), bílý text,
+ * zvýraznění bílou. Barevné jsou jen stavy: chyba, v pořádku, varování. */
+@define-color island        rgba(0, 0, 0, 0.80);       /* pozadí panelů, poslední číslo = průhlednost */
+@define-color island_border rgba(255, 255, 255, 0.10); /* tenký okraj */
+@define-color tile          rgba(255, 255, 255, 0.05); /* dlaždice uvnitř panelu */
 @define-color hover         rgba(255, 255, 255, 0.10);
-@define-color fg            #dbe7ee;
-@define-color fg_dim        #7f97a5;
-@define-color pill          #e6eef2;                   /* světlá pilulka jako vypínač v liště */
-@define-color pill_fg       #0a1e2c;
-@define-color accent        #7dbedc;
-@define-color bad           #bf616a;
-@define-color good          #a3be8c;
-@define-color warn          #ebcb8b;
+@define-color fg            #ffffff;
+@define-color fg_dim        #a0a0a0;
+@define-color pill          #ffffff;                   /* bílá pilulka (zapnuté věci, tlačítka) */
+@define-color pill_fg       #000000;
+@define-color accent        #ffffff;
+@define-color bad           #ff003c;
+@define-color good          #00ff9c;
+@define-color warn          #ffd166;
 
 /* === Základ === */
 * {
@@ -1026,8 +1028,8 @@ button.power-mode:disabled {
 }
 
 .rec-card.paused {
-  background: alpha(#ebcb8b, 0.12);
-  border-color: alpha(#ebcb8b, 0.35);
+  background: alpha(@warn, 0.12);
+  border-color: alpha(@warn, 0.35);
 }
 
 .rec-dot {
@@ -1037,7 +1039,7 @@ button.power-mode:disabled {
 }
 
 .rec-card.paused .rec-dot {
-  color: #ebcb8b;
+  color: @warn;
 }
 
 .rec-title {
@@ -1075,12 +1077,12 @@ button.rec-btn.rec-stop label {
 }
 
 .rec-card.saved {
-  background: alpha(#a3be8c, 0.14);
-  border-color: alpha(#a3be8c, 0.35);
+  background: alpha(@good, 0.14);
+  border-color: alpha(@good, 0.35);
 }
 
 .rec-card.saved .rec-dot {
-  color: #a3be8c;
+  color: @good;
 }
 
 .rec-spin {
@@ -1133,7 +1135,7 @@ button.cache-btn:disabled label {
 }
 
 /* === Lišta nahoře (místo Waybaru): vypadá stejně jako dřívější Waybar === */
-@define-color bar_island rgba(10, 30, 44, 0.80);   /* pozadí ostrůvků lišty (při otevření přejde do @island) */
+@define-color bar_island rgba(0, 0, 0, 0.50);   /* pozadí ostrůvků lišty (při otevření přejde do @island) */
 
 .bar-bg {
   background: transparent;
@@ -1198,7 +1200,7 @@ button.bar-vpn.off label {
 }
 
 button.bar-vpn.on label {
-  color: #7dbedc;
+  color: @accent;
 }
 
 button.bar-netspeed label {
@@ -1241,7 +1243,7 @@ button.bar-power:hover label {
 
 /* bubliny s nápovědou (jako dřív u Waybaru) */
 tooltip {
-  background: rgba(10, 30, 44, 0.95);
+  background: rgba(0, 0, 0, 0.95);
   border: 1px solid @island_border;
   border-radius: 10px;
 }
