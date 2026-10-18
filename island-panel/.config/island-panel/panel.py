@@ -6995,11 +6995,19 @@ class Bar:
         self.mod(bw, left, "battery", None, "bar-plain")
         self.mod(bw, center, "clock", lambda origin: self.app.panel.toggle(origin=origin))
         self.mod(bw, right, "net", net("wifi"))
-        self.mod(bw, right, "disk", lambda _o: spawn("dolphin") if shutil.which("dolphin") else
-                 spawn("xdg-open", os.path.expanduser("~")))
+        self.mod(bw, right, "disk", lambda _o: self.open_files())
         self.mod(bw, right, "bt", net("bluetooth"))
         self.mod(bw, right, "vpn", net("vpn"))
         self.mod(bw, right, "power", lambda _o: spawn(os.path.expanduser("~/.config/rofi/powermenu/type-1/powermenu.sh")))
+
+    @staticmethod
+    def open_files():
+        """Správce souborů v domovské složce (Thunar, jinak Dolphin, jinak výchozí)."""
+        for cmd in ("thunar", "dolphin", "nautilus"):
+            if shutil.which(cmd):
+                spawn(cmd, os.path.expanduser("~"))
+                return
+        spawn("xdg-open", os.path.expanduser("~"))
 
     # ------------------------------------------------------------ data
     @staticmethod

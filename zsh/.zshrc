@@ -121,3 +121,4 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 # --- island: ys = yazi jako správce (root) se stejným vzhledem; POZOR, smí smazat i systémové soubory
 ys() { sudo YAZI_CONFIG_HOME="$HOME/.config/yazi" "$(command -v yazi)" "$@"; }
+alias brave-browser='brave-browser --disable-gpu-compositing'

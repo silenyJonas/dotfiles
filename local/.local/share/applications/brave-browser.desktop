@@ -105,7 +105,7 @@ Comment[vi]=Truy cập Internet
 Comment[zh_CN]=访问互联网
 Comment[zh_HK]=連線到網際網路
 Comment[zh_TW]=連線到網際網路
-Exec=/usr/bin/brave-browser-stable %U
+Exec=/usr/bin/brave-browser-stable --disable-gpu-compositing %U
 StartupNotify=true
 StartupWMClass=brave-browser
 Terminal=false
@@ -118,8 +118,8 @@ Actions=new-window;new-private-window;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=/usr/bin/brave-browser-stable
+Exec=/usr/bin/brave-browser-stable --disable-gpu-compositing
 
 [Desktop Action new-private-window]
 Name=New Incognito Window
-Exec=/usr/bin/brave-browser-stable --incognito
+Exec=/usr/bin/brave-browser-stable --disable-gpu-compositing --incognito
