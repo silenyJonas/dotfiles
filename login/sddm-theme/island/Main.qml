@@ -522,10 +522,7 @@ Rectangle {
     focus: true
     Keys.onPressed: function(event) {
         if (!root.unlocked) {
-            root.unlock()
-            // první stisknuté písmeno už patří do hesla
-            if (event.text && event.text.length === 1 && event.text >= " ")
-                password.text += event.text
+            root.unlock()                     // klávesa jen odemkne, do hesla se nepíše
             event.accepted = true
         }
     }
