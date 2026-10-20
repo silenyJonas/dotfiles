@@ -78,9 +78,10 @@ CLOSE_DELAY_MS = 350     # za jak dlouho po odjetí kurzoru se panel schová
 SIDE_ENABLED = True      # boční panel s hlasitostí a jasem u pravého okraje
 SIDE_TRIGGER_HEIGHT = 320  # výška citlivého pruhu u pravého okraje (je uprostřed výšky)
 SIDE_TRIGGER_WIDTH = 3     # šířka citlivého pruhu
+EDGE_POLL_MS = 120         # jak často se kontroluje kurzor u pravého okraje (záloha za citlivý pruh)
 SLIDER_HEIGHT = 150      # výška posuvníků v bočním panelu
 SPIN_SECONDS = 8         # za jak dlouho se obal alba (deska) otočí jednou dokola; 0 = netočí se
-SPIN_FPS = 15            # kolikrát za sekundu se deska překreslí
+SPIN_FPS = 30            # kolikrát za sekundu se deska překreslí
 SIDE_OPEN_DELAY_MS = 300   # po jak dlouhé době na pravém okraji vyjede hlasitost a jas
 
 CENTER_ENABLED = True      # ovládací centrum u pravého okraje
@@ -140,6 +141,8 @@ BAR_RADIUS = 16              # zaoblení ostrůvků
 BAR_CLOCK = "%H:%M %d.%m."   # formát času uprostřed
 MORPH_MS = 240               # jak dlouho ostrůvek roste a okno z něj vyjíždí
 BAR_FADE_GAP = 24            # na užším monitoru: boční ostrůvek blíž než tohle k rozšířenému středu se schová
+CORNER_OPEN_MS = 40          # jak rychle se spodní rohy ostrůvku narovnají, když se otevírá okno pod ním
+CORNER_CLOSE_MS = 160        # jak rychle se zase zaoblí, když okno zajede
 
 NET_ENABLED = True           # okno Wi-Fi a Bluetooth (panel.py --wifi, --bluetooth)
 NET_WIDTH = 340              # šířka okna
@@ -1636,7 +1639,7 @@ class AutoHide:
         return False
 
     def on_leave(self, _win, event):
-        if event.detail == Gdk.NotifyType.INFERIOR:
+        if event is not None and event.detail == Gdk.NotifyType.INFERIOR:
             return False          # kurzor jen přejel na prvek uvnitř okna
         self.hovering = False
         self.cancel_close()
@@ -2133,12 +2136,23 @@ class Panel(AutoHide):
         self.apps_built = True
         for child in self.flow.get_children():
             self.flow.remove(child)
-        apps = [a for a in Gio.AppInfo.get_all() if a.should_show()]
-        apps.sort(key=lambda a: (a.get_display_name() or "").lower())
         favourites = set(self.quick_ids())
+        apps = [a for a in Gio.AppInfo.get_all() if a.should_show()]
+        # stejná aplikace víckrát (RPM i Flatpak, dva .desktop soubory) jen jednou:
+        # přednost má ta v rychlých aplikacích, pak ta z RPM (id bez teček)
+        apps.sort(key=lambda a: ((a.get_display_name() or "").casefold(),
+                                 app_key(a) not in favourites, "." in app_key(a)))
+        unique, seen = [], set()
         for app in apps:
+            name = (app.get_display_name() or "").casefold()
+            if name and name in seen:
+                continue
+            seen.add(name)
+            unique.append(app)
+        for app in unique:
             item = vbox(4, "app")
-            if app_key(app) in favourites:
+            fav = app_key(app) in favourites
+            if fav:
                 set_class(item, "favourite", True)
             icon = app.get_icon()
             image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.DND) if icon else \
@@ -2146,6 +2160,18 @@ class Panel(AutoHide):
             image.set_pixel_size(40)
             item.pack_start(image, False, False, 0)
             item.pack_start(label(app.get_display_name() or "", "app-name", ellipsize=True, lines=2), False, False, 0)
+            # hvězdička vpravo nahoře (ukáže se po najetí myší): přidat / odebrat z rychlých aplikací
+            star = css(Gtk.Button(), "flat", "app-star", "on" if fav else "off")
+            star.add(Gtk.Image.new_from_icon_name("starred-symbolic" if fav else "non-starred-symbolic",
+                                                  Gtk.IconSize.MENU))
+            star.set_can_focus(False)
+            star.set_halign(Gtk.Align.END)
+            star.set_valign(Gtk.Align.START)
+            star.set_tooltip_text("Remove from quick apps" if fav else "Add to quick apps")
+            star.connect("clicked", lambda _b, a=app: GLib.idle_add(lambda: self.toggle_quick(a) and False))
+            box = Gtk.Overlay()
+            box.add(item)
+            box.add_overlay(star)
             child = Gtk.FlowBoxChild()
             child.app = app
             extra = []
@@ -2154,7 +2180,7 @@ class Panel(AutoHide):
             child.keywords = " ".join(filter(None, [
                 app.get_display_name(), app.get_name(), app.get_executable(), app.get_description(),
                 APP_ALIASES.get(app_key(app), ""), *extra])).lower()
-            child.add(item)
+            child.add(box)
             self.flow.add(child)
         self.flow.show_all()
         self.build_quick()
@@ -2211,7 +2237,7 @@ class Panel(AutoHide):
             button.connect("button-press-event", lambda _b, ev, a=app: ev.button == 3 and (self.toggle_quick(a) or True))
             self.quick_row.pack_start(button, False, False, 0)
         if not keys:
-            self.quick_row.pack_start(label("Right-click an app below to add it here.", "dim", "small", xalign=0),
+            self.quick_row.pack_start(label("Click the star on an app below to add it here.", "dim", "small", xalign=0),
                                       True, True, 0)
         self.quick_row.show_all()
         self.quick.set_visible(not self.search.get_text())
@@ -4078,6 +4104,11 @@ class RightEdge:
         self.win.connect("enter-notify-event", self.on_trigger_enter)
         self.win.connect("leave-notify-event", self.on_trigger_leave)
         self.win.show()
+        # Záloha: neviditelný pruh nemusí dostat událost "kurzor vjel" (novější Hyprland, víc monitorů),
+        # proto se navíc pár krát za sekundu zeptáme Hyprlandu, kde kurzor je.
+        self.polled_edge = None
+        if hypr_socket(".socket.sock"):
+            GLib.timeout_add(EDGE_POLL_MS, self.poll_edge)
         # Citlivý pruh leží na stejném místě jako pravý kraj obou panelů a může být nad nimi,
         # takže kurzor na pruhu se počítá jako kurzor nad panelem.
         for panel in (side, center):
@@ -4118,6 +4149,42 @@ class RightEdge:
         self.side_timer = None
         self.side.show()
         return False
+
+    def edge_monitor(self, x, y):
+        """Monitor, na jehož pravém okraji (u kraje celé plochy) a v citlivém pásu kurzor je."""
+        display = Gdk.Display.get_default()
+        geos = [(display.get_monitor(i), display.get_monitor(i).get_geometry())
+                for i in range(display.get_n_monitors())]
+        for mon, g in geos:
+            if not (g.x <= x < g.x + g.width and g.y <= y < g.y + g.height):
+                continue
+            right = g.x + g.width
+            if x < right - self.ZONE:
+                return None
+            # vpravo je další monitor: tohle není okraj plochy, kurzor jen přejíždí
+            if any(o.x == right and o.y <= y < o.y + o.height for _m, o in geos if o is not g):
+                return None
+            mid = g.y + g.height / 2
+            return mon if abs(y - mid) <= SIDE_TRIGGER_HEIGHT / 2 else None
+        return None
+
+    def poll_edge(self):
+        if screen_locked():
+            return True
+        pos = hypr_json("cursorpos")
+        if not pos:
+            return True
+        mon = self.edge_monitor(pos.get("x", -1), pos.get("y", -1))
+        if mon is not None and self.polled_edge is None:
+            self.polled_edge = mon
+            for panel in (self.side, self.center):     # panel vyjede na monitoru, kde je kurzor
+                if panel is not None and not panel.visible and GtkLayerShell.is_supported():
+                    GtkLayerShell.set_monitor(panel.win, mon)
+            self.on_trigger_enter()
+        elif mon is None and self.polled_edge is not None:
+            self.polled_edge = None
+            self.on_trigger_leave()
+        return True
 
     # --- kurzor nad panelem s hlasitostí
     def on_side_pointer(self, *_):
@@ -6331,6 +6398,9 @@ class Connections(AutoHide):
         self.reveal.add(root)
         self.reveal.show()
         self.hide_timer = None
+        # dokud se pravý ostrůvek zužuje / rozšiřuje, je okno ořízlé na jeho šířku (žádný zub)
+        self.reveal.connect("draw", self.clip_to_island)
+        self.reveal.connect_after("draw", self.draw_morph_edge)
         self.win.add(self.reveal)
         head = hbox(4)
         self.pages, self.tabs = {}, {}
@@ -6523,6 +6593,41 @@ class Connections(AutoHide):
                 page.render()
         return False
 
+    # --- napojení na pravý ostrůvek: okno je zarovnané doprava, ořez se drží jeho pravé hrany
+    def morph_rect(self):
+        if not self.attach:
+            return None
+        bw, key = self.attach
+        if bw.progress(key) >= 1:
+            return None
+        a = self.reveal.get_allocation()
+        margin = self.root.get_style_context().get_margin(Gtk.StateFlags.NORMAL)
+        height = a.height - margin.bottom
+        width = min(bw.rect(key)[2], a.width)
+        return a.width - width, 0, width, max(0, height)
+
+    def clip_to_island(self, _widget, cr):
+        rect = self.morph_rect()
+        if rect is not None:
+            x, y, w, h = rect
+            island_path(cr, x, y, w, max(h, 0.1), 0, min(BAR_RADIUS, h / 2))
+            cr.clip()
+        return False
+
+    def draw_morph_edge(self, _widget, cr):
+        rect = self.morph_rect()
+        if rect is None or rect[3] < 1:
+            return False
+        x, y, w, h = rect
+        open_outline(cr, x + 0.5, y, w - 1, h - 0.5, 0, max(0, min(BAR_RADIUS, h / 2) - 0.5), open_top=True)
+        cr.set_source_rgba(*rgba_tuple(self.root.get_style_context(), "island_border", (0.49, 0.75, 0.86, 0.25)))
+        cr.set_line_width(1)
+        cr.stroke()
+        return False
+
+    def morph_tick(self):
+        self.reveal.queue_draw()
+
     def on_hypr_event(self, name, data):
         """Kliknutí na jiné okno nebo přepnutí plochy okno zavře (i během psaní hesla)."""
         if not self.visible or time.monotonic() - self.shown_at < 0.4:
@@ -6611,7 +6716,10 @@ class BarWindow:
 
     def __init__(self, bar, monitor):
         self.bar, self.monitor = bar, monitor
-        self.anim = {k: {"p": 0.0, "from": 0.0, "to": 0.0, "start": 0.0, "width": 0} for k in self.KEYS}
+        # round = zaoblení spodních rohů ostrůvku (1 = kulaté, 0 = rovné, navazuje na vysunuté okno)
+        self.anim = {k: {"p": 0.0, "from": 0.0, "to": 0.0, "start": 0.0, "width": 0, "round": 1.0}
+                     for k in self.KEYS}
+        self.last_step = None
         self.tick_id, self.hover_zone, self.open_timer, self.poll_id = None, None, None, None
         self.exclusive = 0
         self.collide, self.misses = {}, 0
@@ -6738,7 +6846,7 @@ class BarWindow:
             if w <= 1 or fade >= 1:
                 continue
             p = self.progress(key)
-            bottom = BAR_RADIUS * (1 - p)
+            bottom = BAR_RADIUS * ease_out(self.anim[key]["round"])
             # schovávaný ostrůvek zároveň vyjede nahoru za okraj obrazovky; rozmazání pod ním
             # (blur v Hyprlandu) se drží jeho tvaru, takže zmizí s ním a nezůstane po něm skvrna
             y -= fade * (y + h + 2)
@@ -6783,6 +6891,7 @@ class BarWindow:
         st["from"], st["to"], st["start"] = st["p"], target, GLib.get_monotonic_time() / 1e6
         if self.tick_id is None:
             # krok animace v rytmu obnovování displeje (90 Hz, 144 Hz…), ne podle vlastního časovače
+            self.last_step = None
             self.tick_id = self.win.add_tick_callback(self.on_tick)
 
     def on_tick(self, _widget, clock):
@@ -6793,13 +6902,21 @@ class BarWindow:
 
     def step(self, now):
         busy = False
+        dt = 0.0 if self.last_step is None else max(0.0, now - self.last_step)
+        self.last_step = now
         for st in self.anim.values():
-            if st["p"] == st["to"]:
-                continue
-            t = (now - st["start"]) / (MORPH_MS / 1000)
-            # stejné zpomalení na konci při otevírání i zavírání (jako vysouvání okna)
-            st["p"] = st["to"] if t >= 1 else st["from"] + (st["to"] - st["from"]) * ease_out(t)
-            busy = busy or st["p"] != st["to"]
+            if st["p"] != st["to"]:
+                t = (now - st["start"]) / (MORPH_MS / 1000)
+                # stejné zpomalení na konci při otevírání i zavírání (jako vysouvání okna)
+                st["p"] = st["to"] if t >= 1 else st["from"] + (st["to"] - st["from"]) * ease_out(t)
+            # Spodní rohy: při otevírání hned rovné (ostrůvek plynule přejde do okna pod ním, žádný zub),
+            # kulaté se stanou až po úplném zajetí okna.
+            closed = st["to"] == 0 and st["p"] == 0
+            if closed:
+                st["round"] = min(1.0, st["round"] + dt / (CORNER_CLOSE_MS / 1000))
+            else:
+                st["round"] = max(0.0, st["round"] - dt / (CORNER_OPEN_MS / 1000))
+            busy = busy or st["p"] != st["to"] or st["round"] not in (0.0, 1.0)
         self.area.queue_draw()
         self.update_input()
         for key in ("left", "right"):

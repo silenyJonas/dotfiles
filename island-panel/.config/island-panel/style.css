@@ -435,6 +435,33 @@ button.quick-app:hover {
   color: @accent;
 }
 
+/* hvězdička u aplikace: přidat do rychlých aplikací (vidět po najetí myší, u oblíbených vždy) */
+button.app-star {
+  padding: 2px;
+  min-width: 0;
+  min-height: 0;
+  margin: 2px;
+  border-radius: 8px;
+  background: transparent;
+  color: @fg_dim;
+  opacity: 0;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+
+flowboxchild:hover button.app-star,
+button.app-star.on {
+  opacity: 1;
+}
+
+button.app-star.on {
+  color: @accent;
+}
+
+button.app-star:hover {
+  background: @hover;
+  color: @fg;
+}
+
 scrollbar {
   background: transparent;
   border: none;

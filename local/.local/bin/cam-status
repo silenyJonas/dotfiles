@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+if lsmod | grep -q '^uvcvideo'; then echo "Kamera: ZAPNUTÁ ($(ls /dev/video* 2>/dev/null | xargs))"; else echo "Kamera: vypnutá"; fi

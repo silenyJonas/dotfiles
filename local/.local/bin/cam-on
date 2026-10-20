@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+sudo modprobe uvcvideo && sleep 1 && echo "Kamera zapnutá: $(ls /dev/video* 2>/dev/null | xargs)" && notify-send -i camera-web "Kamera zapnutá" "Vypnout: cam-off" 2>/dev/null || true

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+if sudo modprobe -r uvcvideo 2>/dev/null; then
+  echo "Kamera vypnutá."; notify-send -i camera-web "Kamera vypnutá" 2>/dev/null || true
+else
+  echo "Kameru právě používá program:"; fuser -v /dev/video* 2>&1 | sed 's/^/   /'
+  echo "Zavři ho a zkus cam-off znovu."
+fi
