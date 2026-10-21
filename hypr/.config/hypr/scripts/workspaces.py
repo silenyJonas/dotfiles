@@ -20,6 +20,56 @@ def hypr(*args):
     return out
 
 
+_LUA = None
+
+
+def lua():
+    """Hyprland s Lua configem (hyprland.lua) má jiný tvar příkazů "hyprctl dispatch"."""
+    global _LUA
+    if _LUA is None:
+        try:
+            _LUA = json.loads(hypr("-j", "status")).get("configProvider") == "lua"
+        except (json.JSONDecodeError, AttributeError):
+            _LUA = False
+    return _LUA
+
+
+def q(text):
+    return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# příkazy pro "hyprctl dispatch" ve starém i Lua tvaru
+def d_focus_dir(direction):
+    return f"hl.dsp.focus({{ direction = {q(direction)} }})" if lua() else f"movefocus {direction}"
+
+
+def d_focus_monitor(mon):
+    return f"hl.dsp.focus({{ monitor = {q(mon)} }})" if lua() else f"focusmonitor {mon}"
+
+
+def d_focus_window(address):
+    return f"hl.dsp.focus({{ window = {q('address:' + address)} }})" if lua() else f"focuswindow address:{address}"
+
+
+def d_workspace(ws):
+    return f"hl.dsp.focus({{ workspace = {int(ws)} }})" if lua() else f"workspace {ws}"
+
+
+def d_move_silent(ws, address):
+    if lua():
+        return f"hl.dsp.window.move({{ workspace = {int(ws)}, follow = false, window = {q('address:' + address)} }})"
+    return f"movetoworkspacesilent {ws},address:{address}"
+
+
+def d_ws_to_monitor(ws, mon):
+    return f"hl.dsp.workspace.move({{ workspace = {int(ws)}, monitor = {q(mon)} }})" if lua() \
+        else f"moveworkspacetomonitor {ws} {mon}"
+
+
+def dispatch(cmd):
+    hypr("dispatch", cmd)
+
+
 def hj(what):
     try:
         return json.loads(hypr("-j", what))
@@ -73,20 +123,20 @@ def nav(direction):
     before = hj("activewindow").get("address")
     _f, _a, _p = state()
     mon = _f
-    hypr("dispatch", "movefocus", direction)
+    dispatch(d_focus_dir(direction))
     focused, active, per = state()
     after = hj("activewindow").get("address")
     if focused != mon:                                     # fokus utekl na jiný monitor -> vrátit, brát jako kraj
-        hypr("dispatch", "focusmonitor", mon)
+        dispatch(d_focus_monitor(mon))
         if before:
-            hypr("dispatch", "focuswindow", f"address:{before}")
+            dispatch(d_focus_window(before))
     elif before != after:
         return                                             # vedle bylo okno, hotovo
     cur = active.get(mon)
     mine = per.get(mon, {})
     target = plan_nav(direction, cur, mine.get(cur, 0), mine, used_ids(per))
     if target is not None and target != cur:
-        hypr("dispatch", "workspace", str(target))
+        dispatch(d_workspace(target))
 
 
 # ------------------------------------------------------------------ zacelení děr
@@ -120,17 +170,17 @@ def compact():
         for src, dst in moves:
             for c in clients:
                 if c["workspace"]["id"] == src:
-                    batch.append(f"dispatch movetoworkspacesilent {dst},address:{c['address']}")
+                    batch.append("dispatch " + d_move_silent(dst, c["address"]))
             # Plocha s novým číslem vznikne na monitoru s fokusem, ne na tomhle. Když je fokus na druhé
             # obrazovce, okna by na ni přeskočila, proto plochu hned vrátit na její monitor.
-            batch.append(f"dispatch moveworkspacetomonitor {dst} {mon}")
+            batch.append("dispatch " + d_ws_to_monitor(dst, mon))
             if active.get(mon) == src:
                 follow = dst
         if follow is not None:
-            batch.append(f"dispatch focusmonitor {mon}")
-            batch.append(f"dispatch workspace {follow}")   # zůstat u svých oken
+            batch.append("dispatch " + d_focus_monitor(mon))
+            batch.append("dispatch " + d_workspace(follow))   # zůstat u svých oken
         if focused and focused != mon:
-            batch.append(f"dispatch focusmonitor {focused}")
+            batch.append("dispatch " + d_focus_monitor(focused))
         hypr("--batch", " ; ".join(batch))
 
 

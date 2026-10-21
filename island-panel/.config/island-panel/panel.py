@@ -1098,15 +1098,26 @@ class PowerModes:
             rate = rates[0] if which == "min" else rates[-1]
             if abs(rate - m["refreshRate"]) < 0.5:
                 continue
-            tool(self.hyprctl, "keyword", "monitor",
-                 f"{m['name']},{m['width']}x{m['height']}@{rate:.2f},{m['x']}x{m['y']},{m['scale']:g}")
+            if hypr_lua():
+                mode = f"{m['width']}x{m['height']}@{rate:.2f}"
+                pos = f"{m['x']}x{m['y']}"
+                tool(self.hyprctl, "eval",
+                     f"hl.monitor({{ output = {lua_str(m['name'])}, mode = {lua_str(mode)}, "
+                     f"position = {lua_str(pos)}, scale = {lua_str(format(m['scale'], 'g'))} }})")
+            else:
+                tool(self.hyprctl, "keyword", "monitor",
+                     f"{m['name']},{m['width']}x{m['height']}@{rate:.2f},{m['x']}x{m['y']},{m['scale']:g}")
 
     def effects(self, on):
         if self.hyprctl:
             value = "true" if on else "false"
-            tool(self.hyprctl, "--batch", f"keyword decoration:blur:enabled {value} ; "
-                                          f"keyword animations:enabled {value} ; "
-                                          f"keyword decoration:shadow:enabled {value}")
+            if hypr_lua():
+                tool(self.hyprctl, "eval", f"hl.config({{ decoration = {{ blur = {{ enabled = {value} }}, "
+                                           f"shadow = {{ enabled = {value} }} }}, animations = {{ enabled = {value} }} }})")
+            else:
+                tool(self.hyprctl, "--batch", f"keyword decoration:blur:enabled {value} ; "
+                                              f"keyword animations:enabled {value} ; "
+                                              f"keyword decoration:shadow:enabled {value}")
 
     def awake(self, on):
         if on and self.awake_proc is None and shutil.which("systemd-inhibit"):
@@ -1522,6 +1533,29 @@ def hypr_json(what):
         return json.loads(data)
     except (OSError, ValueError):
         return None
+
+
+_HYPR_LUA = None
+
+
+def hypr_lua():
+    """Běží Hyprland s Lua configem (hyprland.lua)? Pak má "hyprctl dispatch" jiný tvar a "keyword"
+    nefunguje (místo něj "hyprctl eval"). Zjistí se jednou, panel se s Hyprlandem stejně spouští znovu."""
+    global _HYPR_LUA
+    if _HYPR_LUA is None:
+        status = hypr_json("status")
+        _HYPR_LUA = isinstance(status, dict) and status.get("configProvider") == "lua"
+    return _HYPR_LUA
+
+
+def hypr_dispatch(legacy, lua):
+    """Argumenty pro hyprctl: starý tvar (seznam), nebo Lua výraz (hl.dsp…), podle běžícího configu."""
+    return ["dispatch", lua] if hypr_lua() else ["dispatch", *legacy]
+
+
+def lua_str(text):
+    """Řetězec jako Lua literál (uvozovky a zpětná lomítka escapované)."""
+    return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 class HyprEvents:
@@ -3635,7 +3669,7 @@ class ControlCenter(AutoHide):
             return None
         return {
             "suspend": ("systemctl", "suspend"),
-            "logout": (self.hyprctl or "hyprctl", "dispatch", "exit"),
+            "logout": (self.hyprctl or "hyprctl", *hypr_dispatch(["exit"], "hl.dsp.exit()")),
             "reboot": ("systemctl", "reboot"),
             "poweroff": ("systemctl", "poweroff"),
         }[key]
@@ -3927,11 +3961,13 @@ class ControlCenter(AutoHide):
     def focus_window(self, address):
         self.hide()
         if self.hyprctl:
-            spawn(self.hyprctl, "dispatch", "focuswindow", f"address:{address}")
+            spawn(self.hyprctl, *hypr_dispatch(["focuswindow", f"address:{address}"],
+                                               f"hl.dsp.focus({{ window = {lua_str('address:' + address)} }})"))
 
     def close_window(self, address):
         if self.hyprctl:
-            run(self.hyprctl, "dispatch", "closewindow", f"address:{address}")
+            run(self.hyprctl, *hypr_dispatch(["closewindow", f"address:{address}"],
+                                             f"hl.dsp.window.close({{ window = {lua_str('address:' + address)} }})"))
         GLib.timeout_add(350, lambda: self.refresh_windows() and False)
 
     # ------------------------------------------------------------ rychlé přepínače
