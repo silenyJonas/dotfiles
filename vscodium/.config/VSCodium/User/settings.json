@@ -172,5 +172,26 @@
         "repositories": true,
         "searchAndCompare": false,
         "launchpad": true
-    }
+    },
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/.angular/**": true,
+        "**/vendor/**": true,
+        "**/storage/framework/**": true,
+        "**/.git/objects/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.angular": true,
+        "**/vendor": true,
+        "**/storage/framework": true,
+        "**/.git/objects": true
+    },
+    "typescript.tsserver.maxTsServerMemory": 2048,
+    "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+    "extensions.autoUpdate": false,
+    "workbench.editor.limit.enabled": true,
+    "workbench.editor.limit.value": 12
 }
