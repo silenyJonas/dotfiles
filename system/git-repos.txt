@@ -1,0 +1,11 @@
+.config/nvim.bak https://github.com/AstroNvim/AstroNvim
+.config/nvim.bak/nvim https://github.com/AstroNvim/AstroNvim
+Apps/hollywood https://github.com/dustinkirkland/hollywood
+Apps/rofi https://github.com/adi1090x/rofi.git
+Apps/waybar https://github.com/anmol-fzr/waybar
+Apps/WaybarTheme https://github.com/soaddevgit/WaybarTheme.git
+Git/web-platform git@github.com:jonclsolutions/web-platform.git
+Git/ggc_daemon https://github.com/silenyJonas/ggc_daemon
+dotfiles https://github.com/silenyJonas/dotfiles.git
+src/mpvpaper https://github.com/GhostNaN/mpvpaper
+src/spicetify-themes https://github.com/spicetify/spicetify-themes.git

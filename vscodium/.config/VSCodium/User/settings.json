@@ -191,7 +191,7 @@
     },
     "typescript.tsserver.maxTsServerMemory": 2048,
     "typescript.tsserver.experimental.enableProjectDiagnostics": false,
-    "extensions.autoUpdate": false,
+    "extensions.autoUpdate": "off",
     "workbench.editor.limit.enabled": true,
     "workbench.editor.limit.value": 12
 }

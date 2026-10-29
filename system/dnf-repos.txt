@@ -1,0 +1,19 @@
+repo id                                            repo name
+adoptium-temurin-java-repository                   Adoptium
+brave-browser                                      Brave Browser
+code                                               Visual Studio Code
+copr:copr.fedorainfracloud.org:lionheartp:Hyprland Copr repo for Hyprland owned by lionheartp
+copr:copr.fedorainfracloud.org:phracek:PyCharm     Copr repo for PyCharm owned by phracek
+fedora                                             Fedora 44 - x86_64
+fedora-cisco-openh264                              Fedora 44 openh264 (From Cisco) - x86_64
+google-chrome                                      google-chrome
+nodesource-nodejs                                  Node.js Packages for Linux RPM based distros - x86_64
+nodesource-nsolid                                  N|Solid Packages for Linux RPM based distros - x86_64
+rpmfusion-free                                     RPM Fusion for Fedora 44 - Free
+rpmfusion-free-updates                             RPM Fusion for Fedora 44 - Free - Updates
+rpmfusion-nonfree                                  RPM Fusion for Fedora 44 - Nonfree
+rpmfusion-nonfree-nvidia-driver                    RPM Fusion for Fedora 44 - Nonfree - NVIDIA Driver
+rpmfusion-nonfree-steam                            RPM Fusion for Fedora 44 - Nonfree - Steam
+rpmfusion-nonfree-updates                          RPM Fusion for Fedora 44 - Nonfree - Updates
+updates                                            Fedora 44 - x86_64 - Updates
+vscodium                                           VSCodium

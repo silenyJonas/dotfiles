@@ -1,0 +1,7 @@
+com.discordapp.Discord	flathub
+com.jetbrains.PyCharm-Community	flathub
+com.obsproject.Studio	flathub
+com.spotify.Client	flathub
+com.visualstudio.code	flathub
+dev.neovide.neovide	flathub
+dev.vencord.Vesktop	flathub

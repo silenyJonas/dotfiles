@@ -1,0 +1,42 @@
+# /opt
+brave.com
+google
+island-hypr
+lampp
+# ~/Apps
+hollywood
+pipes.sh
+Postman Agent
+rofi
+snap
+tty-clock-master
+waybar
+WaybarTheme
+# ~/.local/bin
+cam-off
+cam-on
+cam-status
+easyocr
+f2py
+fonttools
+imageio_download_bin
+imageio_remove_bin
+island-sddm-bg
+isympy
+lsm2bin
+ninja
+numpy-config
+proton
+proton-viewer
+pybidi
+pyftmerge
+pyftsubset
+spotify-launch
+tiff2fsspec
+tiffcomment
+tifffile
+torchfrtrace
+torchrun
+ttx
+# ~/.cargo/bin
+yazi

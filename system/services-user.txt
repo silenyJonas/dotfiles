@@ -1,0 +1,12 @@
+island-sddm-bg.path
+dbus-broker.service
+obex.service
+systemd-tmpfiles-setup.service
+wireplumber.service
+xdg-user-dirs.service
+dbus.socket
+pipewire-pulse.socket
+pipewire.socket
+snapd.session-agent.socket
+grub-boot-success.timer
+systemd-tmpfiles-clean.timer

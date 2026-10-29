@@ -95,6 +95,7 @@ default-fonts-other-mono
 default-fonts-other-sans
 default-fonts-other-serif
 deltarpm
+designcraft
 desktop-backgrounds-compat
 desktop-backgrounds-gnome
 dhcp-client
@@ -111,6 +112,7 @@ dracut-live
 dracut-network
 e2fsprogs
 ed
+effectcraft
 efibootmgr
 ethtool
 evince
@@ -130,6 +132,7 @@ file
 file-devel
 filelight
 filesystem
+filmcraft
 fira-code-fonts
 firefox
 firewall-config
@@ -365,6 +368,7 @@ libxcb
 libxcrypt-compat
 libXrandr
 libXrender
+lightcraft
 lightdm-gtk
 linux-firmware
 livesys-scripts
@@ -464,13 +468,16 @@ pavucontrol
 pciutils
 pcsc-lite
 pcsc-lite-ccid
+pdfcraft
 phonon-qt6-backend-vlc
+photocraft
 php-cli
 php-common
 php-intl
 php-mbstring
 php-mysqlnd
 php-pdo
+php-pecl-pcov
 php-pecl-zip
 php-process
 php-xml
@@ -651,6 +658,7 @@ usb_modeswitch
 usbutils
 usermode
 util-linux
+vectorcraft
 vifm
 vim-enhanced
 vim-filesystem
