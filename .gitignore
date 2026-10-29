@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 *.bak-*
+__pycache__/
+*.pyc
+*.bak*
