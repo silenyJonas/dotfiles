@@ -15,7 +15,7 @@ alias cmatrix='cmatrix -C white'
 alias firefox='nohup firefox >/dev/null 2>&1 &'
 alias postmanstart="\"$HOME/Apps/Postman Agent/app/postman-agent\" &"
 alias postmanstop="pkill -f postman-agent"
-alias brave="nohup brave-browser > /dev/null 2>&1 & disown"
+alias brave="nohup $(command -v brave-browser || command -v brave) > /dev/null 2>&1 & disown"
 
 # ───── XAMPP ─────
 alias xamppstart='sudo /opt/lampp/lampp start'
@@ -25,7 +25,7 @@ alias xamppgui='sudo /opt/lampp/manager-linux-x64.run'
 alias xamppstatus='sudo /opt/lampp/lampp status 2>/dev/null'
 
 # ───── SYSTEM ─────
-alias update='sudo dnf update -y && sudo dnf upgrade -y'
+if command -v pacman >/dev/null; then alias update='paru -Syu'; else alias update='sudo dnf update -y && sudo dnf upgrade -y'; fi
 alias reboot='sudo systemctl reboot'
 alias shutdown='sudo systemctl poweroff'
 alias meminfo='free -h'
@@ -121,4 +121,3 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 # --- island: ys = yazi jako správce (root) se stejným vzhledem; POZOR, smí smazat i systémové soubory
 ys() { sudo YAZI_CONFIG_HOME="$HOME/.config/yazi" "$(command -v yazi)" "$@"; }
-alias brave-browser='brave-browser --disable-gpu-compositing'

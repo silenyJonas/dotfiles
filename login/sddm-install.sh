@@ -12,8 +12,8 @@ done
 sudo -v
 
 echo "== 1/7 SDDM"
-rpm -q sddm >/dev/null 2>&1 || sudo dnf install -y sddm
-rpm -q sddm | sed 's/^/   /'
+if command -v pacman >/dev/null; then pacman -Q sddm >/dev/null 2>&1 || sudo pacman -S --needed --noconfirm sddm; pacman -Q sddm | sed 's/^/   /'
+else rpm -q sddm >/dev/null 2>&1 || sudo dnf install -y sddm; rpm -q sddm | sed 's/^/   /'; fi
 
 echo "== 2/7 téma do $T"
 sudo rm -rf "$T"

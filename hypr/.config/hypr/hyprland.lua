@@ -50,7 +50,7 @@ hl.window_rule({ match = { class = "^(discord)$" }, size = "1280 720" })
 hl.on("hyprland.start", function()
     -- tapeta (vybraná v přepínači tapet, jinak výchozí)
     hl.exec_cmd('swaybg -i "$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null || echo ~/Pictures/wallpapers/my_name.jpg)" -m fill')
-    hl.exec_cmd("/usr/libexec/lxqt-policykit-agent")
+    hl.exec_cmd("/usr/libexec/lxqt-policykit-agent || /usr/bin/lxqt-policykit-agent")
     -- Island panel a lišta
     hl.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py")
     -- zamykání a zhasínání (hypridle)
