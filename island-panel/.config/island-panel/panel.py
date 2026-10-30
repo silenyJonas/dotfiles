@@ -6917,6 +6917,13 @@ class BarWindow:
         self.anim[key]["width"] = width
         if key == "center" and self.anim["center"]["p"] <= 0:
             self.check_collisions()
+        if key == "center":
+            # boční ostrůvek zajede pod rozšířený střed: okno napojené na něj (Wi-Fi, Bluetooth, VPN)
+            # se zavře s ním; na širokém monitoru ostrůvek nezajíždí, takže okno zůstane
+            for popout in self.bar.popouts():
+                at = popout.attach
+                if popout.visible and at and at[0] is self and at[1] != "center" and self.collide.get(at[1]):
+                    popout.hide()
         self.animate(key, 1.0)
 
     def close(self, key):

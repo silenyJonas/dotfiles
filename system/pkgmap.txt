@@ -163,3 +163,5 @@ xorg-x11-drv-nvidia-cuda=-
 kernel-devel=-
 kernel-headers=-
 dkms=dkms
+alsa-sof-firmware=sof-firmware
+alsa-ucm=alsa-ucm-conf
