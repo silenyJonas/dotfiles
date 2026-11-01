@@ -1,6 +1,3 @@
--- Caelestia shell místo Island panelu? Přepíná příkaz shell-switch (soubor ~/.local/state/caelestia-mix/on) -- caelestia-mix
-local CAELESTIA = (function() local f = io.open(os.getenv("HOME") .. "/.local/state/caelestia-mix/on") if f then f:close() return true end return false end)() -- caelestia-mix
--- caelestia-mix
 -- Hyprland config (Lua, Hyprland 0.56+). Převedeno 1:1 z hyprland.conf, chování je stejné.
 -- Wiki: https://wiki.hypr.land/Configuring/Start/
 -- Starý config zůstává jako hyprland.conf; když tenhle soubor smažeš (nebo přejmenuješ),
@@ -12,7 +9,6 @@ local CAELESTIA = (function() local f = io.open(os.getenv("HOME") .. "/.local/st
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
 hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@144", position = "auto", scale = "1" })
 
-
 ---------------------
 ---- MY PROGRAMS ----
 ---------------------
@@ -20,7 +16,6 @@ local terminal    = "kitty"
 local fileManager = "thunar"
 local menu        = "wofi --show drun"   -- (nepoužívá se, Super+R je rofi)
 local mainMod     = "SUPER"
-
 
 ---------------------
 ---- SCREENSHOTS ----
@@ -34,7 +29,6 @@ hl.bind(mainMod .. " + SHIFT + S",     hl.dsp.exec_cmd('g=$(slurp) && sleep 0.1 
 -- Celá obrazovka zkopírovaná rovnou do schránky
 hl.bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
 
-
 ---------------------------
 ---- PRAVIDLA PRO OKNA ----
 ---------------------------
@@ -46,22 +40,14 @@ hl.window_rule({ match = { class = "^(Alacritty)$", title = "^Yazi:.*" }, opacit
 -- discord velikost
 hl.window_rule({ match = { class = "^(discord)$" }, size = "1280 720" })
 
-
 -------------------
 ---- AUTOSTART ----
 -------------------
 hl.on("hyprland.start", function()
-    -- tapeta (vybraná v přepínači tapet, jinak výchozí)
-    if not CAELESTIA then hl.exec_cmd('swaybg -i "$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null || echo ~/Pictures/wallpapers/my_name.jpg)" -m fill') end -- caelestia-mix
     hl.exec_cmd("/usr/libexec/lxqt-policykit-agent || /usr/bin/lxqt-policykit-agent")
-    -- Island panel a lišta
-    if not CAELESTIA then hl.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py") end -- caelestia-mix
-    -- zamykání a zhasínání (hypridle)
-    if not CAELESTIA then hl.exec_cmd("hypridle") end -- caelestia-mix
     -- plochy bez děr uprostřed (zavřené okno -> další plochy se posunou)
     hl.exec_cmd("python3 ~/.config/hypr/scripts/workspaces.py daemon")
 end)
-
 
 -------------------------------
 ---- ENVIRONMENT VARIABLES ----
@@ -69,7 +55,6 @@ end)
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Kitty")
-
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -172,14 +157,12 @@ hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "a
 hl.animation({ leaf = "workspaces",    enabled = true, speed = 3,    bezier = "easeOutQuint", style = "slide" })
 hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 7,    bezier = "quick" })
 
-
 ---------------
 ---- INPUT ----
 ---------------
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 
 hl.device({ name = "epic-mouse-v1", sensitivity = -0.5 })
-
 
 ---------------------
 ---- KEYBINDINGS ----
@@ -196,8 +179,6 @@ hl.bind(mainMod .. " + T",         hl.dsp.exec_cmd(terminal))
 
 -- Launchery a Rofi
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("$HOME/.config/rofi/launchers/type-2/launcher.sh"))
-if not CAELESTIA then hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-2/powermenu.sh")) end -- caelestia-mix
-if not CAELESTIA then hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-1/powermenu.sh")) end -- caelestia-mix
 
 -- Applets (vše type-2)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.config/rofi/applets/bin/battery.sh"))
@@ -231,23 +212,12 @@ hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT
 hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
 hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
 hl.bind("XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true })
-if not CAELESTIA then hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true }) end -- caelestia-mix
-if not CAELESTIA then hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true }) end -- caelestia-mix
 
 -- Přehrávání (playerctl)
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
-
--- Island panel
-if not CAELESTIA then hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --toggle")) end -- caelestia-mix
-if not CAELESTIA then hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --apps")) end -- caelestia-mix
-if not CAELESTIA then hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --wallpapers")) end -- caelestia-mix
-
--- Zamknout obrazovku
-if not CAELESTIA then hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session")) end -- caelestia-mix
-
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
@@ -261,31 +231,15 @@ hl.window_rule({
     no_focus = true,
 })
 
-hl.layer_rule({ match = { namespace = "waybar" }, blur = true })
-hl.layer_rule({ match = { namespace = "waybar" }, ignore_alpha = 0 })
 hl.layer_rule({ match = { namespace = "rofi" },   blur = true })
 hl.layer_rule({ match = { namespace = "rofi" },   ignore_alpha = 0 })
 
--- Island panel: animace vysouvacích oken
-hl.layer_rule({ match = { namespace = "island-panel-trigger" }, no_anim = true })
-hl.layer_rule({ match = { namespace = "island-side" },          animation = "slide right" })
-hl.layer_rule({ match = { namespace = "island-side-trigger" },  no_anim = true })
-hl.layer_rule({ match = { namespace = "island-center" },        animation = "slide right" })
-hl.layer_rule({ match = { namespace = "island-toast" },         animation = "slide right" })
-
--- Island panel: přepínač tapet
-hl.layer_rule({ match = { namespace = "island-wall" }, animation = "fade" })
+-- tapeta
 hl.layer_rule({ match = { namespace = "wallpaper" },   animation = "fade" })
 hl.window_rule({ match = { class = "^([Ss]potify)$" }, opacity = "0.9 override 0.9" })
 hl.window_rule({ match = { class = "^([Vv]esktop|dev\\.vencord\\.[Vv]esktop)$" }, opacity = "0.9 override 0.9" })
-hl.layer_rule({ match = { namespace = "island-wallfx" }, no_anim = true })
 
 hl.window_rule({ match = { class = "^(com\\.obsproject\\.Studio)$" }, opacity = "0.92 override 0.92" })
-
--- Island lišta: okna z ní vyrůstají, Hyprland do toho nemá přidávat vlastní animace
-hl.layer_rule({ match = { namespace = "^(island-bar|island-panel|island-net)$" }, no_anim = true })
-hl.layer_rule({ match = { namespace = "^(island-bar|island-panel|island-net)$" }, blur = true })
-hl.layer_rule({ match = { namespace = "^(island-bar|island-panel|island-net)$" }, ignore_alpha = 0 })
 
 -- Dialogy (Uložit / Otevřít soubor, potvrzení) plovoucí uprostřed, ne přes celou plochu
 local dialogTitle = "^(Save File|Open File|Save As|Open Files?|Open Folder|Select (File|Folder).*|Uložit.*|Otevřít.*|Vybrat.*)$"
@@ -295,7 +249,8 @@ hl.window_rule({ match = { class = "^(xdg-desktop-portal-gtk|xdg-desktop-portal-
 hl.window_rule({ match = { title = dialogTitle }, float = true })
 hl.window_rule({ match = { title = dialogTitle }, size = "(monitor_w*0.55) (monitor_h*0.6)" })
 hl.window_rule({ match = { title = dialogTitle }, center = true })
-if CAELESTIA then dofile(os.getenv("HOME") .. "/.config/hypr/caelestia.lua") end -- caelestia-mix
+-- Caelestia shell (lišta, panely, spouštěč, zámek): zkratky a spuštění
+dofile(os.getenv("HOME") .. "/.config/hypr/caelestia.lua")
 
 -- velikost okna klávesnicí (jako v Caelestii): Super + -/= šířka, Super+Shift + -/= výška, Super+Alt+šipky
 local function grow(dx, dy) return hl.dsp.window.resize({ x = dx, y = dy, relative = true }) end
