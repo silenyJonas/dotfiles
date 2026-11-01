@@ -129,6 +129,7 @@ POWER_MODES = [
     ("balanced",    "Balanced",    "\uf24e", dict(profile="balanced",    brightness=0.70, hz="max", effects=True,  awake=False)),
     ("performance", "Performance", "\uf0e4", dict(profile="performance", brightness=1.00, hz="max", effects=True,  awake=False)),
     ("turbo",       "Turbo",       "\uf135", dict(profile="performance", brightness=1.00, hz="max", effects=True,  awake=True)),
+    ("gaming",      "Gaming",      "\uf11b", dict(profile="balanced",    brightness=None, hz="max", effects=False, awake=True, gaming=True)),
 ]
 IND_SECONDS = 0.28
 QUICK_APPS_MAX = 6         # kolik rychlých aplikací se vejde do řádku
@@ -1119,6 +1120,18 @@ class PowerModes:
                                               f"keyword animations:enabled {value} ; "
                                               f"keyword decoration:shadow:enabled {value}")
 
+    def gaming(self, on):
+        """Herní režim: procesor a grafika přes pomocníka island-gaming (sudo bez hesla), VRR přes hyprctl."""
+        helper = "/usr/local/bin/island-gaming"
+        if os.path.exists(helper):
+            tool("sudo", "-n", helper, "on" if on else "off")
+        if self.hyprctl:
+            vrr = 2 if on else 0          # 2 = adaptivní synchronizace jen u oken na celou obrazovku
+            if hypr_lua():
+                tool(self.hyprctl, "eval", f"hl.config({{ misc = {{ vrr = {vrr} }} }})")
+            else:
+                tool(self.hyprctl, "keyword", "misc:vrr", str(vrr))
+
     def awake(self, on):
         if on and self.awake_proc is None and shutil.which("systemd-inhibit"):
             self.awake_proc = subprocess.Popen(
@@ -1133,11 +1146,15 @@ class PowerModes:
         conf = self.config(key)
         if conf is None:
             return
+        if not conf.get("gaming"):
+            self.gaming(False)
         self.profile(conf["profile"])
         if brightness and backlight is not None and conf["brightness"] is not None:
             backlight.set(conf["brightness"])
         self.refresh_rate(conf["hz"])
         self.effects(conf["effects"])
+        if conf.get("gaming"):
+            self.gaming(True)
         self.current = key
         try:
             os.makedirs(STATE_DIR, exist_ok=True)
@@ -2023,7 +2040,8 @@ class Panel(AutoHide):
             button.add(inner)
             button.set_can_focus(False)
             button.connect("clicked", lambda _b, k=key: self.set_power_mode(k))
-            mode_grid.attach(button, index % 2, index // 2, 1, 1)
+            last_alone = index == len(POWER_MODES) - 1 and index % 2 == 0
+            mode_grid.attach(button, index % 2, index // 2, 2 if last_alone else 1, 1)
             self.p_modes[key] = button
         modes.pack_start(mode_grid, False, False, 0)
         column.pack_start(modes, False, False, 0)

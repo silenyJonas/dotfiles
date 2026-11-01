@@ -1,0 +1,36 @@
+#!/bin/sh
+# Herní režim Island panelu: island-gaming on | off
+# on  = uloží původní hodnoty a nastaví herní; off = vrátí původní. Nic jiného neumí (volá se přes sudo bez hesla).
+S=/run/island-gaming
+CPU=/sys/devices/system/cpu
+case "$1" in
+on)
+  if [ ! -f "$S" ]; then
+    : > "$S"
+    [ -w "$CPU/intel_pstate/max_perf_pct" ] && echo "$CPU/intel_pstate/max_perf_pct $(cat "$CPU/intel_pstate/max_perf_pct")" >> "$S"
+    for f in "$CPU"/cpu[0-9]*/cpufreq/energy_performance_preference; do
+      [ -w "$f" ] && echo "$f $(cat "$f")" >> "$S"
+    done
+    for c in /sys/class/drm/card[0-9]; do
+      [ -w "$c/gt_min_freq_mhz" ] && echo "$c/gt_min_freq_mhz $(cat "$c/gt_min_freq_mhz")" >> "$S"
+    done
+  fi
+  [ -w "$CPU/intel_pstate/max_perf_pct" ] && echo 85 > "$CPU/intel_pstate/max_perf_pct"
+  for f in "$CPU"/cpu[0-9]*/cpufreq/energy_performance_preference; do
+    [ -w "$f" ] && echo performance > "$f" 2>/dev/null
+  done
+  for c in /sys/class/drm/card[0-9]; do
+    if [ -w "$c/gt_min_freq_mhz" ] && [ -r "$c/gt_RP1_freq_mhz" ]; then
+      cat "$c/gt_RP1_freq_mhz" > "$c/gt_min_freq_mhz" 2>/dev/null
+    fi
+  done
+  ;;
+off)
+  [ -f "$S" ] || exit 0
+  # grafika: nejdřív minimum (jinak by nešlo nastavit menší než aktuální)
+  while read -r f v; do [ -w "$f" ] && echo "$v" > "$f" 2>/dev/null; done < "$S"
+  rm -f "$S"
+  ;;
+*) echo "použití: island-gaming on|off"; exit 1 ;;
+esac
+exit 0

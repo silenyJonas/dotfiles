@@ -1,0 +1,7 @@
+tato slozka je temporary ktera slouzi pro docasne ukladani veci souboru atd pro lokalni vyvoj
+
+init script ji proste vytvori a v .gitignoru uz je takze se nepushuje
+
+stale se udelalo hodne manualnich veci
+3) je potreba udelat script aby dokazal inicializovat prostredi s ruznyma balickovacima systemama takze pacman, dnf atd - idealne asi udelat 3 scripty na linux, win a ios - to je optional jen do budoucna pro uplnost - samozrejme bude se to muset otestovat na virtualce 
+5) pak udelat neco jako prepinac "doctor" a to overi ze je vsechno spravne nebo proste nejak overit prostredi kdyz treba budu neco smazavat a promazavat tak to overi ze xampp je zavyslosti jsou vse je v poradku

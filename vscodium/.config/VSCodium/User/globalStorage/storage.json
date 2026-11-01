@@ -1,0 +1,93 @@
+{
+    "telemetry.sqmId": "",
+    "telemetry.machineId": "aa7cd0d4e2067350f761285e02af214f638f3d821163a0f88f6425227425ca90",
+    "telemetry.devDeviceId": "2ef0ff7c-b2cd-4148-9b21-da144358f6f5",
+    "backupWorkspaces": {
+        "workspaces": [],
+        "folders": [
+            {
+                "folderUri": "file:///home/joncl/Git/web-platform"
+            }
+        ],
+        "emptyWindows": []
+    },
+    "profileAssociations": {
+        "workspaces": {
+            "file:///home/joncl/Git/web-platform": "__default__profile__"
+        },
+        "emptyWindows": {}
+    },
+    "theme": "vs-dark",
+    "themeBackground": "#0c0c0c",
+    "windowSplash": {
+        "zoomLevel": 0,
+        "baseTheme": "vs-dark",
+        "colorInfo": {
+            "foreground": "#cccccc",
+            "background": "#0c0c0c",
+            "editorBackground": "#0c0c0c",
+            "titleBarBackground": "#0a0a0a",
+            "titleBarInactiveBackground": "#0a0a0a",
+            "titleBarBorder": "rgba(255, 255, 255, 0.07)",
+            "activityBarBackground": "#0a0a0a",
+            "activityBarBorder": "rgba(255, 255, 255, 0.07)",
+            "modernActivityBarBackground": "#0a0a0a",
+            "modernActivityBarInactiveBackground": "#0a0a0a",
+            "modernActivityBarBorder": "#252526",
+            "modernPanelBorder": "#252526",
+            "modernUIShellBackground": "#0a0a0a",
+            "modernUIInactiveShellBackground": "#0a0a0a",
+            "sideBarBackground": "#0a0a0a",
+            "sideBarBorder": "rgba(255, 255, 255, 0.07)",
+            "panelBackground": "#0a0a0a",
+            "editorGroupBorder": "rgba(255, 255, 255, 0.07)",
+            "editorBorder": "#252526",
+            "surfaceBackground": "#0a0a0a",
+            "surfaceBorder": "#252526",
+            "agentsPanelBackground": "#0a0a0a",
+            "agentsPanelBorder": "#303031",
+            "statusBarBackground": "#0a0a0a",
+            "statusBarInactiveBackground": "#1f1f1f",
+            "statusBarBorder": "rgba(255, 255, 255, 0.07)",
+            "statusBarNoFolderBackground": "#0a0a0a"
+        },
+        "layoutInfo": {
+            "sideBarSide": "left",
+            "editorPartMinWidth": 220,
+            "titleBarHeight": 0,
+            "activityBarWidth": 48,
+            "sideBarWidth": 353,
+            "auxiliaryBarWidth": 0,
+            "statusBarHeight": 22,
+            "windowBorder": false,
+            "modernUI": false,
+            "modernUICompact": false
+        }
+    },
+    "windowSplashWorkspaceOverride": {
+        "layoutInfo": {
+            "sideBarWidth": 353,
+            "auxiliaryBarWidth": 236,
+            "workspaces": {
+                "bd2431f1b390c04514f64ea623258407": {
+                    "sideBarVisible": true,
+                    "auxiliaryBarVisible": false
+                }
+            }
+        }
+    },
+    "windowsState": {
+        "lastActiveWindow": {
+            "folder": "file:///home/joncl/Git/web-platform",
+            "backupPath": "/home/joncl/.config/VSCodium/Backups/3ee453d1adf8fccbb9bb8c5c14c79505",
+            "uiState": {
+                "mode": 0,
+                "x": 0,
+                "y": 0,
+                "width": 950,
+                "height": 1018
+            }
+        },
+        "openedWindows": []
+    }
+}

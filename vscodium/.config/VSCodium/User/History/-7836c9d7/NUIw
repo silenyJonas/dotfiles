@@ -1,0 +1,18 @@
+.dev/
+/build/
+/app_build/
+.~lock.*#
+tests/unit_tests/**/report/
+# Secrets - never commit private keys / certificates (open finding #51)
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.pem
+*.key
+*.p12
+*.pfx
+# Local dev certificate of ng serve - generated per developer by init-workspace.sh (finding #54)
+/erp/ssl/
+temp.txt
+# Local scratch files of development (images, media, notes) - created by init-workspace.sh
+/.temp/

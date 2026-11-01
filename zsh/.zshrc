@@ -121,3 +121,8 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 # --- island: ys = yazi jako správce (root) se stejným vzhledem; POZOR, smí smazat i systémové soubory
 ys() { sudo YAZI_CONFIG_HOME="$HOME/.config/yazi" "$(command -v yazi)" "$@"; }
+# >>> init-workspace: web-platform >>>
+alias web-platform='cd /home/joncl/Git/web-platform'
+alias web-platform-dev='/home/joncl/Git/web-platform/dev.sh'
+alias web-platform-build='/home/joncl/Git/web-platform/deploy/build.sh'
+# <<< init-workspace: web-platform <<<
