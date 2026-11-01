@@ -1,0 +1,171 @@
+{
+    "appearance": {
+        "transparency": {
+            "enabled": true
+        }
+    },
+    "background": {
+        "wallpaperEnabled": true,
+        "wallpaperTransition": "Iris",
+        "desktopClock": {
+            "enabled": false,
+            "position": "bottom-right"
+        }
+    },
+    "bar": {
+        "clock": {
+            "showDate": false,
+            "showIcon": true
+        },
+        "entries": [
+            {
+                "id": "logo",
+                "enabled": true
+            },
+            {
+                "id": "workspaces",
+                "enabled": true
+            },
+            {
+                "id": "spacer",
+                "enabled": true
+            },
+            {
+                "id": "tray",
+                "enabled": true
+            },
+            {
+                "id": "clock",
+                "enabled": true
+            },
+            {
+                "id": "statusIcons",
+                "enabled": true
+            },
+            {
+                "id": "files",
+                "enabled": true
+            },
+            {
+                "id": "power",
+                "enabled": true
+            }
+        ],
+        "statusIcons": [
+            {
+                "id": "lockStatus",
+                "enabled": false
+            },
+            {
+                "id": "audio",
+                "enabled": true
+            },
+            {
+                "id": "microphone",
+                "enabled": false
+            },
+            {
+                "id": "kbLayout",
+                "enabled": false
+            },
+            {
+                "id": "network",
+                "enabled": true
+            },
+            {
+                "id": "bluetooth",
+                "enabled": true
+            },
+            {
+                "id": "battery",
+                "enabled": true
+            }
+        ]
+    },
+    "dashboard": {
+        "showOnHover": true,
+        "performance": {
+            "showCpu": true,
+            "showGpu": true
+        }
+    },
+    "general": {
+        "apps": {
+            "audio": [
+                "pavucontrol"
+            ],
+            "explorer": [
+                "thunar"
+            ],
+            "terminal": [
+                "kitty"
+            ]
+        },
+        "idle": {
+            "timeouts": []
+        }
+    },
+    "launcher": {
+        "favouriteApps": [
+            "brave-browser",
+            "com.spotify.Client",
+            "dev.vencord.Vesktop",
+            "com.obsproject.Studio",
+            "ai.storyteller.photocraft",
+            "virt-manager",
+            "codium"
+        ]
+    },
+    "paths": {
+        "wallpaperDir": "~/Pictures/wallpapers",
+        "sessionGif": ""
+    },
+    "services": {
+        "clockFormat": "TwentyFourHour",
+        "defaultPlayer": "Spotify",
+        "weatherLocation": "Prague",
+        "weatherUnits": "Celsius",
+        "sensorUnits": "Celsius",
+        "smartScheme": false
+    },
+    "sidebar": {
+        "enabled": true,
+        "showOnHover": true
+    },
+    "utilities": {
+        "quickToggles": [
+            {
+                "id": "wifi",
+                "enabled": true
+            },
+            {
+                "id": "bluetooth",
+                "enabled": true
+            },
+            {
+                "id": "mic",
+                "enabled": true
+            },
+            {
+                "id": "settings",
+                "enabled": true
+            },
+            {
+                "id": "gameMode",
+                "enabled": true
+            },
+            {
+                "id": "dnd",
+                "enabled": true
+            },
+            {
+                "id": "vpn",
+                "enabled": true
+            }
+        ]
+    },
+    "border": {
+        "rounding": 20,
+        "thickness": 0
+    }
+}

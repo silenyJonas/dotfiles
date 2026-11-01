@@ -1,3 +1,6 @@
+-- Caelestia shell místo Island panelu? Přepíná příkaz shell-switch (soubor ~/.local/state/caelestia-mix/on) -- caelestia-mix
+local CAELESTIA = (function() local f = io.open(os.getenv("HOME") .. "/.local/state/caelestia-mix/on") if f then f:close() return true end return false end)() -- caelestia-mix
+-- caelestia-mix
 -- Hyprland config (Lua, Hyprland 0.56+). Převedeno 1:1 z hyprland.conf, chování je stejné.
 -- Wiki: https://wiki.hypr.land/Configuring/Start/
 -- Starý config zůstává jako hyprland.conf; když tenhle soubor smažeš (nebo přejmenuješ),
@@ -23,11 +26,11 @@ local mainMod     = "SUPER"
 ---- SCREENSHOTS ----
 ---------------------
 -- Výběr oblasti a otevření v editoru Swappy (podobně jako Win + Štěpátko)
-hl.bind(mainMod .. " + S",             hl.dsp.exec_cmd('grim -g "$(slurp)" - | swappy -f -'))
+hl.bind(mainMod .. " + S",             hl.dsp.exec_cmd('g=$(slurp) && sleep 0.1 && grim -g "$g" - | swappy -f -'))
 -- Celá obrazovka a otevření v editoru Swappy
 hl.bind(mainMod .. " + Print",         hl.dsp.exec_cmd("grim - | swappy -f -"))
 -- Výběr oblasti zkopírovaný rovnou do schránky (bez editoru, ihned do Ctrl + V)
-hl.bind(mainMod .. " + SHIFT + S",     hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
+hl.bind(mainMod .. " + SHIFT + S",     hl.dsp.exec_cmd('g=$(slurp) && sleep 0.1 && grim -g "$g" - | wl-copy'))
 -- Celá obrazovka zkopírovaná rovnou do schránky
 hl.bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
 
@@ -49,12 +52,12 @@ hl.window_rule({ match = { class = "^(discord)$" }, size = "1280 720" })
 -------------------
 hl.on("hyprland.start", function()
     -- tapeta (vybraná v přepínači tapet, jinak výchozí)
-    hl.exec_cmd('swaybg -i "$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null || echo ~/Pictures/wallpapers/my_name.jpg)" -m fill')
+    if not CAELESTIA then hl.exec_cmd('swaybg -i "$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null || echo ~/Pictures/wallpapers/my_name.jpg)" -m fill') end -- caelestia-mix
     hl.exec_cmd("/usr/libexec/lxqt-policykit-agent || /usr/bin/lxqt-policykit-agent")
     -- Island panel a lišta
-    hl.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py")
+    if not CAELESTIA then hl.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py") end -- caelestia-mix
     -- zamykání a zhasínání (hypridle)
-    hl.exec_cmd("hypridle")
+    if not CAELESTIA then hl.exec_cmd("hypridle") end -- caelestia-mix
     -- plochy bez děr uprostřed (zavřené okno -> další plochy se posunou)
     hl.exec_cmd("python3 ~/.config/hypr/scripts/workspaces.py daemon")
 end)
@@ -193,8 +196,8 @@ hl.bind(mainMod .. " + T",         hl.dsp.exec_cmd(terminal))
 
 -- Launchery a Rofi
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("$HOME/.config/rofi/launchers/type-2/launcher.sh"))
-hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-2/powermenu.sh"))
-hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-1/powermenu.sh"))
+if not CAELESTIA then hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-2/powermenu.sh")) end -- caelestia-mix
+if not CAELESTIA then hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("$HOME/.config/rofi/powermenu/type-1/powermenu.sh")) end -- caelestia-mix
 
 -- Applets (vše type-2)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.config/rofi/applets/bin/battery.sh"))
@@ -228,8 +231,8 @@ hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT
 hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
 hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
 hl.bind("XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
+if not CAELESTIA then hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true }) end -- caelestia-mix
+if not CAELESTIA then hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true }) end -- caelestia-mix
 
 -- Přehrávání (playerctl)
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
@@ -238,12 +241,12 @@ hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
 -- Island panel
-hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --toggle"))
-hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --apps"))
-hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --wallpapers"))
+if not CAELESTIA then hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --toggle")) end -- caelestia-mix
+if not CAELESTIA then hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --apps")) end -- caelestia-mix
+if not CAELESTIA then hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/island-panel/panel.py --wallpapers")) end -- caelestia-mix
 
 -- Zamknout obrazovku
-hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session"))
+if not CAELESTIA then hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session")) end -- caelestia-mix
 
 
 --------------------------------
@@ -292,3 +295,24 @@ hl.window_rule({ match = { class = "^(xdg-desktop-portal-gtk|xdg-desktop-portal-
 hl.window_rule({ match = { title = dialogTitle }, float = true })
 hl.window_rule({ match = { title = dialogTitle }, size = "(monitor_w*0.55) (monitor_h*0.6)" })
 hl.window_rule({ match = { title = dialogTitle }, center = true })
+if CAELESTIA then dofile(os.getenv("HOME") .. "/.config/hypr/caelestia.lua") end -- caelestia-mix
+
+-- velikost okna klávesnicí (jako v Caelestii): Super + -/= šířka, Super+Shift + -/= výška, Super+Alt+šipky
+local function grow(dx, dy) return hl.dsp.window.resize({ x = dx, y = dy, relative = true }) end
+hl.bind("SUPER + Minus",         grow(-40, 0),  { repeating = true })
+hl.bind("SUPER + Equal",         grow(40, 0),   { repeating = true })
+hl.bind("SUPER + SHIFT + Minus", grow(0, -40),  { repeating = true })
+hl.bind("SUPER + SHIFT + Equal", grow(0, 40),   { repeating = true })
+hl.bind("SUPER + ALT + Left",    grow(-40, 0),  { repeating = true })
+hl.bind("SUPER + ALT + Right",   grow(40, 0),   { repeating = true })
+hl.bind("SUPER + ALT + Up",      grow(0, -40),  { repeating = true })
+hl.bind("SUPER + ALT + Down",    grow(0, 40),   { repeating = true })
+
+-- malá plovoucí konzole (jako na screenshotu): Super+Shift+T
+hl.window_rule({ match = { class = "^(kitty-mini)$" }, float = true })
+hl.window_rule({ match = { class = "^(kitty-mini)$" }, size = "700 400" })
+hl.window_rule({ match = { class = "^(kitty-mini)$" }, move = "60 40" })
+hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("kitty --class kitty-mini"))
+
+-- výběr oblasti (slurp) bez animace, ať se jeho rámeček neobjeví na snímku
+hl.layer_rule({ match = { namespace = "selection" }, no_anim = true })
