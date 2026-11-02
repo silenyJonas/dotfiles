@@ -90,10 +90,10 @@ ExecStart=%h/.local/bin/island-sddm-bg
 UNIT
 cat > ~/.config/systemd/user/island-sddm-bg.path <<'UNIT'
 [Unit]
-Description=Hlídá změnu tapety (Island panel)
+Description=Hlídá změnu tapety (Caelestia)
 
 [Path]
-PathChanged=%h/.local/state/island-panel/wallpaper
+PathChanged=%h/.local/state/caelestia/wallpaper/path.txt
 Unit=island-sddm-bg.service
 
 [Install]

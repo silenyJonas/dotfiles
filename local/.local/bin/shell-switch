@@ -1,0 +1,28 @@
+#!/bin/sh
+# Přepnutí Island panel ⇄ Caelestia hned, bez odhlášení.
+#   shell-switch             přepnout
+#   shell-switch caelestia   / shell-switch island
+F=~/.local/state/caelestia-mix/on
+mode=$1
+[ -z "$mode" ] && { [ -f "$F" ] && mode=island || mode=caelestia; }
+case $mode in
+caelestia)
+  mkdir -p "${F%/*}"; touch "$F"
+  /usr/bin/python3 ~/.config/island-panel/panel.py --quit >/dev/null 2>&1
+  pkill -x swaybg; pkill -x hypridle
+  hyprctl reload >/dev/null
+  pgrep -f 'qs -c caelestia' >/dev/null || caelestia shell -d >/dev/null 2>&1
+  pgrep -f 'cliphist store' >/dev/null || {
+    setsid -f wl-paste --type text --watch cliphist store >/dev/null 2>&1
+    setsid -f wl-paste --type image --watch cliphist store >/dev/null 2>&1; }
+  echo "Caelestia zapnutá (zpět: shell-switch island)" ;;
+island)
+  rm -f "$F"
+  caelestia shell -k >/dev/null 2>&1; pkill -f 'qs -c caelestia' 2>/dev/null
+  hyprctl reload >/dev/null
+  pgrep -x swaybg >/dev/null || setsid -f swaybg -i "$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null || echo ~/Pictures/wallpapers/my_name.jpg)" -m fill >/dev/null 2>&1
+  pgrep -f island-panel/panel.py >/dev/null || setsid -f /usr/bin/python3 ~/.config/island-panel/panel.py >/dev/null 2>&1
+  pgrep -x hypridle >/dev/null || setsid -f hypridle >/dev/null 2>&1
+  echo "Island panel zapnutý (zpět: shell-switch caelestia)" ;;
+*) echo "použití: shell-switch [caelestia|island]"; exit 1 ;;
+esac

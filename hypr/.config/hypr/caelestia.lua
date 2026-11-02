@@ -1,4 +1,4 @@
--- Caelestia shell v tvém Hyprlandu (načítá ho hyprland.lua).
+-- Caelestia shell v tvém Hyprlandu. Načítá se jen v režimu Caelestia (shell-switch).
 -- Tvoje zkratky z hyprland.lua platí dál; tady jsou jen ty, které ovládají Caelestii.
 local g = hl.dsp.global
 

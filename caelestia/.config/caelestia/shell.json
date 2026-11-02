@@ -114,7 +114,8 @@
             "ai.storyteller.photocraft",
             "virt-manager",
             "codium"
-        ]
+        ],
+        "showOnHover": true
     },
     "paths": {
         "wallpaperDir": "~/Pictures/wallpapers",

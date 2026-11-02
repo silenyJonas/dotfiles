@@ -1,8 +1,8 @@
 [Unit]
-Description=Hlídá změnu tapety (Island panel)
+Description=Hlídá změnu tapety (Caelestia)
 
 [Path]
-PathChanged=%h/.local/state/island-panel/wallpaper
+PathChanged=%h/.local/state/caelestia/wallpaper/path.txt
 Unit=island-sddm-bg.service
 
 [Install]

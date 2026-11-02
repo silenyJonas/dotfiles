@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pozadí přihlašovací obrazovky = aktuální tapeta z plochy.
 
-Spouští se samo, když přepínač tapet v Island panelu změní tapetu (systemd: island-sddm-bg.path).
+Spouští se samo, když se změní tapeta v Caelestii (systemd: island-sddm-bg.path).
 Zapisuje do /usr/share/sddm/themes/island/background.jpg (soubor patří tobě, SDDM ho jen čte).
 Video tapety: použije se jeden snímek (potřebuje ffmpeg), jinak zůstane předchozí pozadí.
 """
@@ -11,7 +11,8 @@ import subprocess
 import sys
 import tempfile
 
-STATE = os.path.expanduser("~/.local/state/island-panel/wallpaper")
+STATES = [os.path.expanduser("~/.local/state/caelestia/wallpaper/path.txt"),   # Caelestia
+          os.path.expanduser("~/.local/state/island-panel/wallpaper")]         # starý Island panel
 OUT = "/usr/share/sddm/themes/island/background.jpg"
 BLUR = "/usr/share/sddm/themes/island/background-blur.jpg"   # rozmazaná verze pro přihlášení
 VIDEO = (".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi")
@@ -19,12 +20,13 @@ MAX_W = 3840
 
 
 def current():
-    try:
-        path = os.path.expanduser(open(STATE).read().strip())
-    except OSError:
-        path = ""
-    if path and os.path.isfile(path):
-        return path
+    for state in STATES:
+        try:
+            path = os.path.expanduser(open(state).read().strip())
+        except OSError:
+            continue
+        if path and os.path.isfile(path):
+            return path
     folder = os.path.expanduser("~/Pictures/wallpapers")
     for root, _dirs, files in os.walk(folder):
         for name in sorted(files):

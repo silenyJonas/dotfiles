@@ -146,6 +146,7 @@ put(["bar", "statusIcons"], [
     {"id": "microphone", "enabled": False}, {"id": "kbLayout", "enabled": False},
     {"id": "network", "enabled": True}, {"id": "bluetooth", "enabled": True}, {"id": "battery", "enabled": True}])
 put(["dashboard", "showOnHover"], True)
+put(["launcher", "showOnHover"], True)             # myš k dolnímu okraji uprostřed = spouštěč aplikací
 put(["border", "thickness"], 0)                    # bez rámečku kolem obrazovky (Caelestia nechá 2 px na najetí myší)
 put(["border", "rounding"], 20)                    # zaoblené rohy u lišty, souběžné s okny (10 + mezera)
 put(["sidebar", "showOnHover"], True)               # najetí do pravého horního rohu = oznámení + přepínače
@@ -230,6 +231,68 @@ for rx in (r"\n([ \t]*)(if \(!inSidebarArea\))\n([ \t]*)screenState\.sidebar = f
     s, k = re.subn(rx, fix, s, count=1); n += k
 open(p, "w").write(s)
 print(f"   vypínací panel: zavře se spolu s pravým panelem ({n} místa)" if n else "   ! vypínací panel: Interactions.qml je jiný, beze změny")
+PY
+
+# spouštěč dole: otevřít po krátkém najetí (jako přehled nahoře), zavřít po odjetí myši
+python3 - "$QS/modules/drawers/Interactions.qml" <<'PY'
+import re, sys
+p = sys.argv[1]; s = open(p).read()
+TAG = "// island: spouštěč dole"
+if TAG in s:
+    print("   spouštěč dole: už upraveno"); sys.exit(0)
+ok = True
+# 1) vlastnosti + časovač (stejné zpoždění jako přehled nahoře)
+a = "    property point dragStart\n"
+if a in s:
+    s = s.replace(a, a + f"    property bool launcherByHover {TAG}\n", 1)
+else:
+    ok = False
+timer = f"""
+    Timer {{ {TAG}
+        id: launcherHoverTimer
+
+        interval: 200
+        onTriggered: {{
+            root.screenState.launcher = true;
+            root.launcherByHover = true;
+        }}
+    }}
+"""
+i = s.rstrip().rfind("}")
+s = s[:i].rstrip() + "\n" + timer + "}\n"
+# 2) najetí: otevřít po zpoždění, odjetí: zavřít (jen když se otevřel najetím)
+rx = re.compile(r"(\n([ \t]*)if \(Config\.launcher\.showOnHover\) \{\n)[ \t]*if \(!screenState\.launcher && inBottomPanel\(panels\.launcher, x, y\)\)\n[ \t]*screenState\.launcher = true;\n")
+m = rx.search(s)
+if m:
+    ind = m.group(2) + "    "
+    body = (f"{ind}const inLauncher = inBottomPanel(panels.launcher, x, y); {TAG}\n"
+            f"{ind}if (!screenState.launcher) {{\n"
+            f"{ind}    if (inLauncher && !launcherHoverTimer.running)\n"
+            f"{ind}        launcherHoverTimer.restart();\n"
+            f"{ind}    else if (!inLauncher)\n"
+            f"{ind}        launcherHoverTimer.stop();\n"
+            f"{ind}}} else if (root.launcherByHover && !inLauncher) {{\n"
+            f"{ind}    screenState.launcher = false;\n"
+            f"{ind}}}\n")
+    s = s[:m.start()] + m.group(1) + body + s[m.end():]
+else:
+    ok = False
+# 3) myš opustila celou plochu: zrušit čekání, zavřít spouštěč otevřený najetím
+a = "        if (!containsMouse) {\n"
+if a in s:
+    s = s.replace(a, a + f"            launcherHoverTimer.stop(); {TAG}\n            if (launcherByHover)\n                screenState.launcher = false;\n", 1)
+else:
+    ok = False
+# 4) spouštěč zavřený jinak (Esc, spuštění aplikace): příště ho najetí zase hlídá od začátku
+a = "        function onLauncherChanged() {\n"
+if a in s:
+    s = s.replace(a, a + f"            if (!root.screenState.launcher) root.launcherByHover = false; {TAG}\n", 1)
+else:
+    ok = False
+if not ok:
+    print("   ! Interactions.qml je v této verzi jiný, spouštěč dole se nezměnil"); sys.exit(0)
+open(p, "w").write(s)
+print("   spouštěč dole: otevře se po 0,2 s najetí, zavře se, když myš odjede")
 PY
 
 # přehled → Performance: karta GPU i pro grafiku Intel (Caelestia umí vytížení jen u AMD/NVIDIA)
@@ -420,7 +483,9 @@ update-desktop-database ~/.local/share/applications 2>/dev/null
 ok "např. 'PhotoCraft (Photoshop)'"
 
 echo "== 7/7 zapnutí"
-WP=$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null)
+# tapeta: ta z Caelestie, jinak z Island panelu, jinak první obrázek ve ~/Pictures/wallpapers
+WP=$(cat ~/.local/state/caelestia/wallpaper/path.txt 2>/dev/null || cat ~/.local/state/island-panel/wallpaper 2>/dev/null)
+[[ -f $WP ]] || WP=$(find ~/Pictures/wallpapers -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | sort | head -1)
 caelestia shell -k >/dev/null 2>&1; pkill -f 'qs -c caelestia' 2>/dev/null; sleep 1   # restart, ať se načte nová lišta
 if [[ -x ~/.local/bin/shell-switch ]]; then
   ~/.local/bin/shell-switch caelestia | sed 's/^/   /'

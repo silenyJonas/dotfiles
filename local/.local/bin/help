@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""help: přehled všeho, co máš k dispozici (zkratky Hyprlandu a Caelestie, aliasy, funkce, vlastní příkazy).
+
+  help            celý přehled
+  help git        jen řádky, kde je "git" (hledá v klávesách, názvech i popisech)
+  help -k         jen klávesové zkratky      help -a   jen aliasy a funkce      help -c   jen příkazy
+Všechno se čte přímo z tvých configů, takže přehled je vždy aktuální.
+"""
+import os, re, shutil, subprocess, sys
+
+HOME = os.path.expanduser("~")
+HYPR = [f"{HOME}/.config/hypr/hyprland.lua", f"{HOME}/.config/hypr/caelestia.lua"]
+ZSHRC = f"{HOME}/.zshrc"
+BIN_DIRS = [f"{HOME}/.local/bin", f"{HOME}/bin", "/usr/local/bin"]
+
+tty = sys.stdout.isatty()
+B, D, C, Y, R = (("\033[1;37m", "\033[2m", "\033[36m", "\033[33m", "\033[0m") if tty else ("",) * 5)
+
+# ------------------------------------------------------------------ zkratky
+KEYNAMES = {
+    "mouse:272": "levé tl. myši", "mouse:273": "pravé tl. myši", "mouse_down": "kolečko dolů", "mouse_up": "kolečko nahoru",
+    "xf86audioraisevolume": "Hlasitost +", "xf86audiolowervolume": "Hlasitost −", "xf86audiomute": "Ztlumit",
+    "xf86audiomicmute": "Ztlumit mikrofon", "xf86monbrightnessup": "Jas +", "xf86monbrightnessdown": "Jas −",
+    "xf86audionext": "Další skladba", "xf86audioprev": "Předchozí skladba", "xf86audioplay": "Play",
+    "xf86audiopause": "Pauza", "print": "PrtSc", "super_l": "(samotný Super)", "period": ".", "minus": "-",
+    "equal": "=", "delete": "Delete", "left": "←", "right": "→", "up": "↑", "down": "↓", "space": "Mezerník",
+    "return": "Enter", "escape": "Esc", "tab": "Tab",
+}
+GLOBALS = {
+    "dashboard": "přehled (kalendář, počasí, média, výkon)", "launcher": "spouštěč aplikací",
+    "nexus": "nastavení Caelestie a tapety", "session": "vypnout / restart / odhlásit", "lock": "zamknout obrazovku",
+    "showall": "všechny panely Caelestie", "utilities": "rychlé přepínače (Wi-Fi, BT, VPN, Game mode…)",
+    "sidebar": "oznámení (panel vpravo)", "clearNotifs": "smazat všechna oznámení",
+    "brightnessUp": "jas +", "brightnessDown": "jas −", "screenshotFreeze": "snímek výřezu se zmrazením obrazu",
+    "screenshot": "snímek výřezu", "mediaToggle": "přehrát / pauza", "mediaNext": "další skladba",
+    "mediaPrev": "předchozí skladba",
+}
+
+def keyname(k):
+    parts = [p.strip() for p in k.split("+") if p.strip()]
+    out = []
+    for p in parts:
+        low = p.lower()
+        out.append(KEYNAMES.get(low) or {"super": "Super", "shift": "Shift", "ctrl": "Ctrl", "control": "Ctrl",
+                                          "alt": "Alt"}.get(low) or (p.upper() if len(p) == 1 else p))
+    if len(out) > 1 and out[-1] == "(samotný Super)":
+        out = ["Super (stisknout a pustit)"]
+    return "+".join(out)
+
+def describe(action, comment, lvars):
+    if comment:
+        return comment
+    a = action.strip()
+    m = re.search(r'global\("caelestia:(\w+)"\)', a)
+    if m:
+        return GLOBALS.get(m.group(1), "Caelestia: " + m.group(1))
+    m = re.match(r"grow\((-?\d+),\s*(-?\d+)\)", a)
+    if m:
+        dx, dy = int(m.group(1)), int(m.group(2))
+        return "užší okno" if dx < 0 else "širší okno" if dx > 0 else "nižší okno" if dy < 0 else "vyšší okno"
+    simple = [
+        (r"window\.close", "zavřít okno"), (r"window\.float", "plovoucí okno zap/vyp"),
+        (r"window\.pseudo", "pseudo-dlaždice"), (r'layout\("togglesplit"\)', "otočit rozdělení oken"),
+        (r"dsp\.exit\(", "ukončit Hyprland (odhlásit)"), (r"window\.drag", "přesunout okno (táhnout)"),
+        (r"window\.resize\(\)", "změnit velikost okna (táhnout)"), (r"window\.fullscreen", "celá obrazovka"),
+        (r'workspace = "e\+1"', "další plocha"), (r'workspace = "e-1"', "předchozí plocha"),
+    ]
+    for rx, txt in simple:
+        if re.search(rx, a):
+            return txt
+    m = re.search(r'focus\(\{ *direction = "(\w+)"', a)
+    if m:
+        return "fokus " + {"up": "nahoru", "down": "dolů", "left": "doleva", "right": "doprava"}.get(m.group(1), m.group(1))
+    m = re.search(r"exec_cmd\((.*)\)\s*$", a)
+    if m:
+        cmd = m.group(1).strip()
+        if cmd in lvars:
+            return f"spustit {lvars[cmd]}"
+        cmd = cmd.strip("'\"")
+        known = [("focus-or-workspace.sh l", "fokus doleva (na kraji: předchozí plocha)"),
+                 ("focus-or-workspace.sh r", "fokus doprava (na kraji: další plocha)"),
+                 ("grim -g", "snímek výřezu"), ("grim -", "snímek celé obrazovky"),
+                 ("set-volume -l", "hlasitost +"), ("set-volume @", "hlasitost −"),
+                 ("SINK@ toggle", "ztlumit zvuk"), ("SOURCE@ toggle", "ztlumit mikrofon"),
+                 ("playerctl next", "další skladba"), ("playerctl previous", "předchozí skladba"),
+                 ("playerctl play-pause", "přehrát / pauza"), ("brightnessctl", "jas"),
+                 ("launchers/", "rofi: spouštěč aplikací"), ("powermenu/", "rofi: vypínací menu"),
+                 ("applets/bin/battery", "rofi: baterie"), ("applets/bin/brightness", "rofi: jas"),
+                 ("applets/bin/mpd", "rofi: přehrávač"), ("applets/bin/volume", "rofi: hlasitost"),
+                 ("caelestia clipboard", "historie schránky"), ("caelestia emoji", "výběr emoji"),
+                 ("caelestia record -r", "nahrávat výřez obrazovky"), ("caelestia record", "nahrávat obrazovku"),
+                 ("island-gaming", "Gaming zap/vyp (procesor + grafika)"), ("kitty --class kitty-mini", "malá plovoucí konzole"),
+                 ("loginctl lock-session", "zamknout obrazovku")]
+        for k, txt in known:
+            if k in cmd:
+                if txt.startswith("snímek"):
+                    txt += " → do schránky" if "wl-copy" in cmd else " → upravit ve Swappy" if "swappy" in cmd else ""
+                return txt
+        return cmd[:70]
+    return a[:70]
+
+def hypr_binds():
+    rows = []
+    for path in HYPR:
+        if not os.path.exists(path):
+            continue
+        raw = open(path, encoding="utf-8").read().split("\n")
+        lines, buf = [], ""
+        for l in raw:                       # víceřádkové hl.bind(...) spojit do jednoho řádku
+            if buf:
+                buf += " " + l.strip()
+                if buf.count("(") <= buf.count(")"):
+                    lines.append(buf); buf = ""
+                continue
+            if l.strip().startswith("hl.bind(") and l.count("(") > l.count(")"):
+                buf = l.strip(); continue
+            lines.append(l)
+        lvars, prev_comment = {}, ""
+        src = "Caelestia" if path.endswith("caelestia.lua") else "Hyprland"
+        for line in lines:
+            s = line.strip()
+            m = re.match(r'local (\w+)\s*=\s*"([^"]*)"', s)
+            if m:
+                lvars[m.group(1)] = m.group(2)
+            if s.startswith("--"):
+                prev_comment = s.lstrip("- ").strip()
+                continue
+            if "if not CAELESTIA" in s:          # Island režim přepínače (už neplatí)
+                prev_comment = ""
+                continue
+            m = re.search(r'hl\.bind\((.+?),\s*(hl\.dsp\..*|g\(.*|grow\(.*)$', s)
+            if not m:
+                if s:
+                    prev_comment = ""
+                continue
+            key, rest = m.group(1).strip(), m.group(2)
+            trail = ""
+            if " -- " in rest:
+                rest, trail = rest.split(" -- ", 1)
+            rest = re.sub(r",\s*\{[^}]*\}\s*\)\s*$", ")", rest).rstrip()
+            rest = re.sub(r"\)\s*$", "", rest, count=1) if rest.count("(") < rest.count(")") else rest
+            key = re.sub(r'mainMod\s*\.\.\s*"', '"SUPER', key)
+            if ".. key" in key or ".. i" in key:
+                continue                           # smyčka ploch, viz níže
+            key = key.replace('"', "").replace("'", "")
+            if rest.startswith("g("):
+                rest = "hl.dsp.global" + rest[1:]
+            trail = trail.strip()
+            if trail.lower() in ("dwindle", "master"):
+                trail = ""
+            desc = describe(rest, trail, lvars)
+            rows.append((keyname(key), desc, src))
+            prev_comment = ""
+        if src == "Hyprland" and any("for i = 1" in l for l in lines):
+            rows.append(("Super+1 … 0", "přepnout na plochu 1–10", src))
+            rows.append(("Super+Shift+1 … 0", "přesunout okno na plochu 1–10", src))
+    # stejná klávesa definovaná dvakrát: platí ta pozdější (Caelestia přepisuje)
+    seen, out = {}, []
+    for r in rows:
+        seen[r[0].lower()] = r
+    for r in rows:
+        if seen[r[0].lower()] is r:
+            out.append(r)
+    return out
+
+# ------------------------------------------------------------------ aliasy a funkce
+def zsh_items():
+    aliases, funcs = [], []
+    if not os.path.exists(ZSHRC):
+        return aliases, funcs
+    skip = {"node", "npm", "brave-browser"}
+    section, prev = "", ""
+    for line in open(ZSHRC, encoding="utf-8"):
+        s = line.strip()
+        if s.startswith("#"):
+            c = re.sub(r"^[#\s-]*(island:\s*)?", "", s).strip()
+            prev = "" if not c or set(c) <= set("=-#") else c
+            continue
+        m = re.match(r"""alias\s+([^=\s]+)=(['"])(.*)\2\s*(?:#\s*(.*))?$""", s)
+        if m and m.group(1) not in skip and "$_app" not in s:
+            aliases.append((m.group(1), m.group(4) or "", m.group(3)))
+        m = re.match(r"(?:function\s+)?([\w-]+)\s*\(\)\s*\{", s)
+        if m:
+            funcs.append((m.group(1), prev))
+        if s:
+            prev = ""
+    names = {a[0] for a in aliases}
+    funcs = [f for f in funcs if f[0] not in names]
+    return aliases, funcs
+
+def omz_count():
+    try:
+        out = subprocess.run(["zsh", "-ic", "alias"], capture_output=True, text=True, timeout=5).stdout
+        return len(out.splitlines())
+    except Exception:
+        return 0
+
+# ------------------------------------------------------------------ vlastní příkazy
+def commands():
+    out = []
+    for d in BIN_DIRS:
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            p = os.path.join(d, f)
+            if not (os.path.isfile(p) and os.access(p, os.X_OK)):
+                continue
+            desc = ""
+            try:
+                with open(p, encoding="utf-8", errors="ignore") as fh:
+                    head = fh.read(1500)
+                if "\0" in head:
+                    continue
+                for l in head.splitlines()[1:12]:
+                    l = l.strip()
+                    if l.startswith("#") and len(l) > 3 and not l.startswith("#!"):
+                        desc = l.lstrip("# ").strip(); break
+                    if l.startswith('"""'):
+                        desc = l.strip('" ').strip(); break
+            except OSError:
+                continue
+            if d == "/usr/local/bin" and not f.startswith("island-"):
+                continue
+            if re.search(r"coding[:=]|generated by|Copyright|frozen_string", desc):
+                desc = ""
+            desc = ("tenhle přehled (help <slovo> hledá)" if f == "help" else desc) or {"cam-on": "zapnout kameru (sudo)", "cam-off": "vypnout kameru (sudo)",
+                            "cam-status": "je kamera zapnutá?", "island-gaming": "Gaming zap/vyp (Super+G)",
+                            "island-drop-caches": "uvolnit mezipaměť souborů (sudo)", "help": "tenhle přehled"}.get(f, "")
+            out.append((f, desc, d.replace(HOME, "~")))
+    return out
+
+# ------------------------------------------------------------------ výstup
+def main():
+    args = sys.argv[1:]
+    only = {a for a in args if a in ("-k", "-a", "-c")}
+    terms = [a.lower() for a in args if not a.startswith("-")]
+    match = lambda *cols: not terms or all(any(t in str(c).lower() for c in cols) for t in terms)
+    out = []
+    def section(title):
+        out.append(f"\n{B}━━ {title}{R}")
+    def row(a, b, w=26, extra=""):
+        pad = max(1, w - len(a))
+        out.append(f"   {C}{a}{R}{' ' * pad}{b}{(' ' + D + extra + R) if extra else ''}")
+
+    if not only or "-k" in only:
+        binds = [r for r in hypr_binds() if match(*r)]
+        if binds:
+            section("Klávesové zkratky")
+            for src in ("Hyprland", "Caelestia"):
+                part = [r for r in binds if r[2] == src]
+                if part:
+                    out.append(f"   {D}{'tvoje (hyprland.lua)' if src == 'Hyprland' else 'Caelestia (caelestia.lua)'}{R}")
+                    for k, desc, _ in part:
+                        row(k, desc)
+        mouse = [("myš k hornímu okraji uprostřed", "přehled (dashboard)"),
+                 ("myš k dolnímu okraji uprostřed", "spouštěč aplikací"),
+                 ("myš do pravého horního rohu", "oznámení + rychlé přepínače"),
+                 ("myš k pravému kraji uprostřed", "hlasitost; tažením doleva vypínací menu"),
+                 ("myš do pravého dolního rohu", "rychlé přepínače"),
+                 ("kolečko nad lištou", "plochy / hlasitost / jas (podle místa)"),
+                 ("klik na logo vlevo nahoře", "spouštěč aplikací"),
+                 ("ikona disku vlevo dole", "Thunar"), ("napiš >wallpaper ve spouštěči", "výběr tapety")]
+        mouse = [m for m in mouse if match(*m)]
+        if mouse:
+            section("Caelestia: myš a okraje obrazovky")
+            for a, b in mouse:
+                row(a, b, 34)
+
+    if not only or "-a" in only:
+        aliases, funcs = zsh_items()
+        aliases = [a for a in aliases if match(*a)]
+        funcs = [f for f in funcs if match(*f)]
+        if aliases:
+            section("Aliasy (~/.zshrc)")
+            for name, comment, value in aliases:
+                v = value if len(value) <= 60 else value[:57] + "…"
+                row(name, comment or v, 18, v if comment else "")
+        if funcs:
+            section("Funkce (~/.zshrc)")
+            for name, comment in funcs:
+                row(name, comment or {"y": "yazi (po ukončení zůstaneš ve složce)", "ys": "yazi jako root",
+                                      "detach": "spustí program odpojený od terminálu",
+                                      "codium": "VSCodium (otevře soubor/složku, terminál zůstane volný)",
+                                      "neovide": "Neovide (nvim v okně)"}.get(name, ""), 18)
+        if not terms:
+            n = omz_count()
+            if n:
+                out.append(f"\n   {D}+ aliasy z oh-my-zsh (hlavně git: gst, gco, gp…): celkem {n} aliasů, všechny vypíše: alias{R}")
+
+    if not only or "-c" in only:
+        cmds = [c for c in commands() if match(*c)]
+        if cmds:
+            section("Vlastní příkazy")
+            for name, desc, d in cmds:
+                row(name, desc, 18, d)
+        cael = [("caelestia shell -d / -k", "spustit / vypnout Caelestii"), ("caelestia wallpaper -f SOUBOR", "nastavit tapetu"),
+                ("caelestia scheme set …", "barvy Caelestie (teď: dynamic, monochrome)"),
+                ("caelestia record", "nahrávání obrazovky"), ("caelestia screenshot", "snímek obrazovky"),
+                ("bash ~/dotfiles/system/caelestia/caelestia-mix.sh", "po aktualizaci Caelestie: obnoví úpravy lišty")]
+        cael = [c for c in cael if match(*c)]
+        if cael:
+            section("Caelestia v terminálu")
+            for a, b in cael:
+                row(a, b, 34)
+
+    if not out:
+        print(f"Nic nenalezeno pro: {' '.join(terms)}")
+        return
+    text = "\n".join(out).lstrip("\n") + f"\n\n{D}help <slovo> hledá, help -k / -a / -c jen jedna část{R}\n"
+    lines = text.count("\n")
+    if tty and lines > shutil.get_terminal_size().lines and shutil.which("less"):
+        subprocess.run(["less", "-R", "-F", "-X"], input=text, text=True)
+    else:
+        sys.stdout.write(text)
+
+if __name__ == "__main__":
+    main()
