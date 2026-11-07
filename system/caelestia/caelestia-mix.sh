@@ -483,9 +483,7 @@ update-desktop-database ~/.local/share/applications 2>/dev/null
 ok "např. 'PhotoCraft (Photoshop)'"
 
 echo "== 7/7 zapnutí"
-# tapeta: ta z Caelestie, jinak z Island panelu, jinak první obrázek ve ~/Pictures/wallpapers
-WP=$(cat ~/.local/state/caelestia/wallpaper/path.txt 2>/dev/null || cat ~/.local/state/island-panel/wallpaper 2>/dev/null)
-[[ -f $WP ]] || WP=$(find ~/Pictures/wallpapers -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | sort | head -1)
+WP=$(cat ~/.local/state/island-panel/wallpaper 2>/dev/null)
 caelestia shell -k >/dev/null 2>&1; pkill -f 'qs -c caelestia' 2>/dev/null; sleep 1   # restart, ať se načte nová lišta
 if [[ -x ~/.local/bin/shell-switch ]]; then
   ~/.local/bin/shell-switch caelestia | sed 's/^/   /'
