@@ -1,0 +1,1280 @@
+{
+    "web_maintenance": {
+        "heading": "Vylepšujeme systém",
+        "text": "Právě probíhá plánovaná údržba, abychom vám mohli nabídnout ještě lepší zážitek.",
+        "sub_text": "Zkuste to prosím za chvíli znovu.",
+        "admin_login": "Přihlášení administrátora",
+        "language": "Jazyk"
+    },
+    "faq": {
+        "header_1": "Často kladené otázky",
+        "write_us_prompt": "Nezodpověděli jsme vše? Napište nám",
+        "question_1": "Jaké typy softwaru dokážete vyvinout?",
+        "answer_1": "Naším zaměřením je kompletní vývoj softwaru od návrhu až po nasazení. Realizujeme webové stránky a aplikace, e-shopy, mobilní aplikace pro iOS a Android, ale také desktopové programy pro firemní i individuální použití. Součástí našich služeb jsou i pokročilá řešení založená na umělé inteligenci a automatizaci procesů. Kromě toho se specializujeme na integrace různých systémů (např. platební brány, ERP, CRM nebo cloudové služby) a také na úpravy a vylepšení již existujících projektů. Vždy hledáme cestu, jak vytvořit nebo optimalizovat řešení na míru, které vám skutečně pomůže v podnikání.",
+        "question_2": "Jak dlouho trvá vytvoření projektu?",
+        "answer_2": "Doba vývoje se vždy odvíjí od rozsahu a složitosti projektu. Jednodušší řešení, jako je prezentační web nebo menší firemní stránky, mohou být hotové už během několika dnů až dvou týdnů. Náročnější projekty, například e-shopy, portály nebo komplexní webové a mobilní aplikace, mohou trvat několik týdnů až měsíců v závislosti na počtu funkcí, designových požadavcích či integracích s dalšími systémy. Po úvodní konzultaci vám připravíme realistický časový plán s milníky, abyste přesně věděli, jak bude vývoj postupovat a kdy můžete očekávat spuštění.",
+        "question_3": "Kolik stojí vývoj webu nebo aplikace?",
+        "answer_3": "Cena se vždy odvíjí od rozsahu a složitosti projektu. Jinou cenu bude mít jednoduchý prezentační web, jinou plnohodnotný e-shop nebo komplexní aplikace s integracemi a pokročilými funkcemi. Do výsledné částky vstupuje také volba technologií, náročnost designu, požadavky na zabezpečení nebo napojení na další systémy. Každý projekt proto posuzujeme individuálně a po úvodní konzultaci vám připravíme přesnou cenovou nabídku spolu s časovým rámcem. Samozřejmostí je transparentnost – vždy víte, za co platíte, a nabízíme i různé varianty řešení podle vašeho rozpočtu a priorit. Díky tomu si můžete vybrat cestu, která nejlépe odpovídá vašim potřebám i finančním možnostem.",
+        "question_4": "Jak obvykle probíhá spolupráce?",
+        "answer_4": "Spolupráci začínáme úvodní konzultací, kde si vyslechneme vaše potřeby, cíle a poznámky. Na základě těchto informací připravíme návrh řešení – ten zahrnuje volbu vhodných technologií, technické specifikace, návrh vzhledu a funkcionalit, časový rámec dokončení i cenovou nabídku. Tento postup vám předložíme ke schválení. Jakmile je vše odsouhlaseno, přecházíme k samotnému vývoji, testování a následnému spuštění projektu. Po celou dobu vás průběžně informujeme o pokroku, zapojujeme vás do klíčových rozhodnutí a zajišťujeme, abyste měli plnou kontrolu nad výsledkem.",
+        "question_5": "Poskytujete i dlouhodobou podporu a údržbu?",
+        "answer_5": "Ano, poskytujeme dlouhodobou podporu a údržbu, protože víme, že spuštěním projektu práce nekončí. Součástí našich služeb je pravidelná aktualizace systémů a knihoven, sledování výkonu a bezpečnosti, monitoring provozu, zálohování dat a také optimalizace podle aktuálních potřeb. V případě problémů nebo nových požadavků reagujeme rychle a pružně, abyste měli jistotu, že vaše řešení zůstane stabilní, bezpečné a plně funkční i do budoucna. Navíc vám můžeme pomoci s rozšiřováním funkcionalit nebo integrací nových technologií, takže se váš projekt může neustále vyvíjet spolu s vaším podnikáním.",
+        "question_6": "Upravujete i hotové aplikace?",
+        "answer_6": "Ano, nemusíme vždy začínat úplně od začátku. Často pracujeme i na úpravách a vylepšeních existujících aplikací nebo webů. Může jít o rozšíření funkcionalit, modernizaci zastaralého vzhledu, zvýšení rychlosti a výkonu, zlepšení zabezpečení nebo třeba přidání integrací s dalšími systémy. Pokud máte projekt, který už funguje, ale potřebuje posunout na vyšší úroveň, dokážeme ho převzít, zanalyzovat jeho stav a navrhnout nejlepší cestu k jeho zlepšení.",
+        "hero_eyebrow": "Vše, co potřebujete vědět",
+        "hero_sub": "Nenašli jste odpověď? Napište nám — obvykle odpovídáme do 48 hodin.",
+        "sidebar_eyebrow": "Přímý kontakt",
+        "sidebar_title": "Nenašli jste odpověď?",
+        "sidebar_text": "Naši specialisté jsou připraveni zodpovědět jakýkoli dotaz.",
+        "sidebar_cta": "Napsat zprávu",
+        "stat_answers_label": "odpovědí",
+        "stat_response_label": "max. odezva",
+        "stat_response_value": "48h",
+        "section_label": "Časté dotazy",
+        "cta_projects_prompt": "Chcete vidět naše projekty?",
+        "cta_projects_btn": "Reference",
+        "categories": {
+            "obecne": "Obecné",
+            "vyvoj": "Vývoj",
+            "ceny": "Ceny",
+            "spoluprace": "Spolupráce",
+            "podpora": "Podpora"
+        },
+        "items": {
+            "obecne": [
+                {
+                    "question": "Čím se vaše společnost zabývá?",
+                    "answer": "Jsme softwarová společnost specializující se na vývoj webových, desktopových, mobilních aplikací a AI řešení."
+                },
+                {
+                    "question": "Jak dlouho jste na trhu?",
+                    "answer": "Na trhu působíme 4 roky."
+                },
+                {
+                    "question": "V jakých jazycích komunikujete?",
+                    "answer": "Primárně komunikujeme v češtině a angličtině."
+                },
+                {
+                    "question": "Pracujete i s menšími projekty?",
+                    "answer": "Ano, rádi se ujmeme jak malých, tak rozsáhlých projektů."
+                },
+                {
+                    "question": "Nabízíte bezplatnou konzultaci?",
+                    "answer": "Ano, první konzultaci poskytujeme bezplatně."
+                }
+            ],
+            "vyvoj": [
+                {
+                    "question": "Jaké technologie používáte pro webový vývoj?",
+                    "answer": "Pro frontend pracujeme primárně s Angular a TypeScriptem, pro backend s C#, PHP nebo Node.js."
+                },
+                {
+                    "question": "Vyvíjíte i mobilní aplikace?",
+                    "answer": "Ano, vyvíjíme nativní i cross-platform mobilní aplikace."
+                },
+                {
+                    "question": "Jak probíhá vývoj desktopových aplikací?",
+                    "answer": "Desktopové aplikace vyvíjíme převážně v C# (WPF, WinForms, MAUI), C++ nebo Pythonu."
+                },
+                {
+                    "question": "Nabízíte integraci AI do existujících systémů?",
+                    "answer": "Ano, implementujeme AI řešení jak do nových, tak stávajících systémů."
+                },
+                {
+                    "question": "Jak zajišťujete kvalitu kódu?",
+                    "answer": "Dodržujeme standardy čistého kódu, code review a automatizované testy."
+                },
+                {
+                    "question": "Jak dlouho trvá vývoj typického projektu?",
+                    "answer": "Délka závisí na rozsahu, obvykle 2-6 týdnů pro jednodušší projekty."
+                }
+            ],
+            "ceny": [
+                {
+                    "question": "Jak jsou stanovovány ceny vašich služeb?",
+                    "answer": "Ceny stanovujeme individuálně podle rozsahu a složitosti."
+                },
+                {
+                    "question": "Jaké jsou přibližné ceny webových projektů?",
+                    "answer": "Ceny se pohybují od nižších tisíc až po desítky tisíc korun."
+                },
+                {
+                    "question": "Nabízíte fixní nebo hodinové sazby?",
+                    "answer": "Nabízíme oba modely podle typu spolupráce."
+                },
+                {
+                    "question": "Existují skryté poplatky?",
+                    "answer": "Ne, veškeré náklady transparentně uvádíme v nabídce."
+                },
+                {
+                    "question": "Jaké jsou platební podmínky?",
+                    "answer": "Fakturujeme zálohu při zahájení a zbytek po dokončení projektu."
+                }
+            ],
+            "spoluprace": [
+                {
+                    "question": "Jak probíhá zahájení spolupráce?",
+                    "answer": "Začínáme úvodní konzultací, analýzou a podpisem smlouvy."
+                },
+                {
+                    "question": "Jak komunikujete v průběhu projektu?",
+                    "answer": "Přes e-mail, videohovory nebo jakákoliv služba, která vám vyhovuje."
+                },
+                {
+                    "question": "Mohu sledovat průběh vývoje?",
+                    "answer": "Ano, máte přístup ke sdílenému projektovému prostoru."
+                },
+                {
+                    "question": "Pracujete agilně?",
+                    "answer": "Ano, pracujeme agilní metodikou rozdělenou do sprintů."
+                },
+                {
+                    "question": "Podepíšete NDA?",
+                    "answer": "Samozřejmě, dohodu o mlčenlivosti podepisujeme před zahájením."
+                }
+            ],
+            "podpora": [
+                {
+                    "question": "Nabízíte podporu po dokončení projektu?",
+                    "answer": "Ano, od záruční doby až po dlouhodobé servisní smlouvy."
+                },
+                {
+                    "question": "Jak rychle reagujete na nahlášené problémy?",
+                    "answer": "Kritické problémy do 24h, standardní do 48h."
+                },
+                {
+                    "question": "Zajišťujete aktualizace a údržbu?",
+                    "answer": "Ano, v rámci servisních balíčků."
+                },
+                {
+                    "question": "Co se stane, pokud chci projekt rozšířit?",
+                    "answer": "Provedeme analýzu a připravíme nabídku na rozšíření."
+                },
+                {
+                    "question": "Poskytujete školení?",
+                    "answer": "Ano, ke každému projektu zajistíme dokumentaci a školení."
+                },
+                {
+                    "question": "Jak nahlásím chybu?",
+                    "answer": "E-mailem, přes helpdesk nebo telefonicky."
+                }
+            ]
+        },
+        "empty_state_text": "Pro tuto kategorii zatím nemáme žádné otázky. Zkuste jinou kategorii, nebo se nám ozvěte přímo."
+    },
+    "navigation": {
+        "home": "Domů",
+        "services": "Služby",
+        "shop": "E-Shop",
+        "contact": "Kontakt",
+        "references": "Projekty",
+        "references_full": "Realizované projekty",
+        "faq": "FAQ",
+        "faq_full": "Často kladené otázky",
+        "about-us": "O nás",
+        "login": "Přihlásit se",
+        "jobs": "Kariéra",
+        "login_btn": "Přihlásit"
+    },
+    "projects": {
+        "header_1": "Poslední dokončené projekty",
+        "table_header_title": "Název projektu",
+        "table_header_duration": "Doba plnění",
+        "table_header_client": "Zadavatel",
+        "more_button_prompt": "Chcete vidět více?",
+        "more_button_link_text": "Celý seznam zde",
+        "hero_eyebrow": "Portfolio & realizace",
+        "hero_sub": "Přehled projektů, na kterých jsme pracovali. Každý projekt je pro nás výzvou i příběhem.",
+        "stat_1_num": "10+",
+        "stat_1_label": "dokončených projektů",
+        "stat_2_num": "4",
+        "stat_2_label": "roky ve vývoji",
+        "stat_3_num": "4",
+        "stat_3_label": "platformy",
+        "sidebar_about_eyebrow": "O portfoliu",
+        "sidebar_about_title": "Vybraná realizovaná díla",
+        "sidebar_about_text": "Ukázka projektů z různých oblastí — webový, desktopový, mobilní a AI vývoj. Kliknutím na projekt zobrazíte podrobnosti.",
+        "sidebar_legend_eyebrow": "Kategorie projektů",
+        "legend_web": "Webový vývoj",
+        "legend_desktop": "Desktopový vývoj",
+        "legend_mobile": "Mobilní vývoj",
+        "legend_ai": "AI & automatizace",
+        "sidebar_archive_text": "Tato stránka zobrazuje výběr. Kompletní archiv projektů najdete na externím portálu.",
+        "sidebar_archive_btn": "Celý archiv projektů",
+        "cta_1_eyebrow": "Zaujal vás náš přístup?",
+        "cta_1_text": "Podívejte se na naše služby a zjistěte, jak vám můžeme pomoci.",
+        "cta_1_btn": "Naše služby",
+        "cta_2_eyebrow": "Připraveni začít?",
+        "cta_2_text": "Kontaktujte nás a probereme váš projekt.",
+        "cta_2_btn": "Kontaktovat nás",
+        "project_1": {
+            "name": "E-shop se zdravými produkty",
+            "duration": "2025",
+            "client": "First Prague Company, s. r. o.",
+            "category": "web",
+            "size": "E-shop na míru včetně administrace",
+            "role": "Analýza, UX\/UI design, vývoj, nasazení a podpora",
+            "description": "Navrhli jsme a vyvinuli kompletní, moderní e-shop na míru, který se zaměřuje na zdravé produkty. Důraz jsme kladli na rychlé načítání, přehledný nákupní proces a jednoduchou správu pro majitele – bez omezení krabicových řešení.",
+            "features": [
+                "Katalog produktů s filtrováním a vyhledáváním",
+                "Košík a objednávkový proces optimalizovaný pro mobil",
+                "Napojení na platební bránu (platby kartou)",
+                "Sledování skladových zásob v reálném čase",
+                "Administrace objednávek, produktů a zákazníků",
+                "Uživatelské role a oprávnění v administraci",
+                "Transakční e-maily (potvrzení, změna stavu objednávky)",
+                "Souhlasy s cookies a zpracováním osobních údajů dle GDPR"
+            ],
+            "stack": [
+                {
+                    "label": "Frontend",
+                    "value": "Angular, TypeScript"
+                },
+                {
+                    "label": "Backend",
+                    "value": "Laravel (PHP), REST API"
+                },
+                {
+                    "label": "Databáze",
+                    "value": "MariaDB"
+                },
+                {
+                    "label": "Zabezpečení",
+                    "value": "HTTPS\/TLS, tokenová autentizace, šifrovaná hesla"
+                },
+                {
+                    "label": "Provoz",
+                    "value": "Linux server, pravidelné zálohy"
+                }
+            ],
+            "result": "Zákazníci nakupují rychle a bez komplikací na jakémkoli zařízení a majitel spravuje celý obchod z jedné administrace bez nutnosti zásahu vývojáře."
+        },
+        "project_2": {
+            "name": "Školní webové stránky",
+            "duration": "2025",
+            "client": "NAUCSETO, s. r. o.",
+            "category": "web",
+            "size": "Webový portál s redakčním systémem",
+            "role": "Návrh struktury, design, vývoj, školení správců",
+            "description": "Vytvořili jsme přehledné a moderní webové stránky pro vzdělávací instituci, které slouží jako hlavní komunikační portál pro studenty, rodiče a učitele. Všechny klíčové informace jsou na jednom místě a obsah spravuje škola sama.",
+            "features": [
+                "Interaktivní rozvrhy hodin",
+                "Kalendář školních akcí",
+                "Blog s novinkami a aktualitami",
+                "Zabezpečená sekce pro studijní materiály",
+                "Přihlášení s rolemi (správce, učitel, student)",
+                "Redakční systém pro správu obsahu bez technických znalostí",
+                "Responzivní zobrazení a přístupnost dle WCAG"
+            ],
+            "stack": [
+                {
+                    "label": "Frontend",
+                    "value": "Angular, TypeScript"
+                },
+                {
+                    "label": "Backend",
+                    "value": "Laravel (PHP), REST API"
+                },
+                {
+                    "label": "Databáze",
+                    "value": "MariaDB"
+                },
+                {
+                    "label": "Zabezpečení",
+                    "value": "HTTPS\/TLS, řízení přístupu podle rolí"
+                },
+                {
+                    "label": "Provoz",
+                    "value": "Linux server, pravidelné zálohy"
+                }
+            ],
+            "result": "Komunikace školy s rodiči a studenty se zjednodušila – rozvrhy, akce i materiály jsou dostupné online na jednom místě."
+        },
+        "label_features": "Klíčové funkce",
+        "label_facts": "O projektu",
+        "label_category": "Oblast",
+        "label_scope": "Rozsah",
+        "label_role": "Naše role",
+        "label_duration": "Realizace",
+        "label_client": "Klient",
+        "label_stack": "Technologický stack",
+        "label_result": "Výsledek"
+    },
+    "footer": {
+        "group_offer": "Nabídka",
+        "group_company": "Společnost",
+        "group_support": "Podpora",
+        "ico_label": "IČO",
+        "dic_label": "DIČ",
+        "contact_header": "Kontakt"
+    },
+    "legal": {
+        "privacy_policy": "Zásady ochrany osobních údajů",
+        "terms_of_service": "Obchodní podmínky",
+        "cookies_policy": "Zásady cookies"
+    },
+    "services": {
+        "header_1_text": "Vývoj softwaru na míru",
+        "hero_sub": "Tvoříme webové, desktopové a mobilní aplikace přesně podle vašich potřeb.",
+        "info_header": "Software, který odpovídá vašemu byznysu",
+        "info_header_2": "jaké jsou kroky ve vývoji softwaru",
+        "show_projects_header": "Nahlédněte do dokončených projektů.",
+        "show_contact_header": "Nebo nás kontaktujte",
+        "projects_button_text": "Realizované projekty",
+        "contact_button_text": "Kontakt",
+        "service_main_text": "<p>Vyvíjíme software na míru pro firmy, které potřebují víc než hotové řešení z police. Webové aplikace a systémy, desktopové nástroje pro Windows, macOS nebo Linux, mobilní aplikace pro iOS a Android — vždy postavené na vlastním kódu, přizpůsobené vašim procesům a navržené tak, aby rostly s vaším podnikáním.<\/p><p>Nezáleží na tom, zda jde o interní firemní systém, zákaznický portál, e-shop nebo komplexní CRM. Každý projekt začíná analýzou vašich skutečných potřeb, ne šablonou. Výsledek je řešení, které funguje přesně tam, kde ho potřebujete — ať už v prohlížeči, na desktopu nebo v kapse.<\/p>",
+        "cards": {
+            "custom_title": "Vývoj na míru",
+            "custom_text": "Nepracujeme se šablonami. Každé řešení stavíme od základů přesně podle vašich procesů — ať jde o webovou aplikaci, desktopový nástroj nebo mobilní app.",
+            "auth_title": "Přihlašování a správa uživatelů",
+            "auth_text": "Každý systém s více uživateli dostane zabezpečené přihlašování, správu rolí a oprávnění. Kdo smí co vidět a upravovat si nastavíte sami.",
+            "seo_title": "SEO optimalizace",
+            "seo_text": "Webová řešení dodáváme technicky optimalizovaná pro vyhledávače — správná struktura, rychlost načítání, meta tagy a sitemap. Základ pro organický provoz.",
+            "hosting_title": "Nasazení a hosting",
+            "hosting_text": "Postaráme se o nasazení na server, nastavení SSL certifikátu, CI\/CD pipeline a základní monitoring. Spuštění není práce navíc — je součástí projektu.",
+            "integrations_title": "Napojení na externí systémy",
+            "integrations_text": "Propojíme váš nový software s tím, co už máte — ERP, účetnictví, platební brány, e-mailing nebo libovolné API. Žádné ruční přenášení dat.",
+            "security_title": "Bezpečnost a GDPR",
+            "security_text": "Šifrování dat, ochrana před běžnými útoky, správné zacházení s osobními údaji. Bezpečnost řešíme od začátku, ne jako záplatu na konci.",
+            "admin_title": "Administrace a správa obsahu",
+            "admin_text": "Webová a systémová řešení mají vlastní administrační rozhraní. Texty, produkty, objednávky nebo uživatele si spravujete sami, bez programátora.",
+            "support_title": "Podpora a údržba",
+            "support_text": "Po spuštění nezmizneme. Nabízíme průběžnou technickou podporu, bezpečnostní aktualizace a monitoring. Pokud se cokoliv pokazí, víte na koho se obrátit.",
+            "custom_tags": [
+                "Web",
+                "Desktop",
+                "Mobil"
+            ],
+            "auth_tags": [
+                "Přihlášení",
+                "Role",
+                "Oprávnění"
+            ],
+            "seo_tags": [
+                "Meta tagy",
+                "Sitemap",
+                "Core Web Vitals"
+            ],
+            "hosting_tags": [
+                "Server",
+                "CI\/CD",
+                "SSL"
+            ],
+            "integrations_tags": [
+                "API",
+                "Platební brána",
+                "ERP"
+            ],
+            "security_tags": [
+                "HTTPS",
+                "Šifrování",
+                "GDPR"
+            ],
+            "admin_tags": [
+                "CMS",
+                "Dashboard",
+                "Správa obsahu"
+            ],
+            "support_tags": [
+                "Údržba",
+                "Aktualizace",
+                "Monitoring"
+            ]
+        },
+        "pricing": {
+            "eyebrow": "Co projekt zahrnuje",
+            "header": "Rozsah spolupráce",
+            "subheader": "Každý projekt je individuální — tabulka níže ukazuje, co různé typy projektů typicky zahrnují a v čem se liší. Konkrétní rozsah a cenu vždy řešíme individuálně po konzultaci.",
+            "note": "Tabulka je orientační. Skutečný rozsah každého projektu se stanovuje individuálně na základě vašich požadavků.",
+            "packages": [
+                {
+                    "id": "web-presentation",
+                    "name": "Webová prezentace",
+                    "description": "Firemní web, landing page, portfolio"
+                },
+                {
+                    "id": "web-app",
+                    "name": "Webová aplikace",
+                    "description": "E-shop, portál, CRM, interní systém",
+                    "highlight": true
+                },
+                {
+                    "id": "desktop",
+                    "name": "Desktop aplikace",
+                    "description": "Nástroj pro Windows, macOS nebo Linux"
+                },
+                {
+                    "id": "mobile",
+                    "name": "Mobilní aplikace",
+                    "description": "iOS, Android nebo cross-platform"
+                }
+            ],
+            "features": [
+                {
+                    "key": "custom_code",
+                    "label": "Vlastní kód (bez šablon)",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": true,
+                        "desktop": true,
+                        "mobile": true
+                    }
+                },
+                {
+                    "key": "responsive",
+                    "label": "Responzivní design",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": true,
+                        "desktop": "dle platformy",
+                        "mobile": true
+                    }
+                },
+                {
+                    "key": "cms",
+                    "label": "Administrace obsahu",
+                    "tooltip": "Vlastní rozhraní pro správu textů, obrázků a dalšího obsahu bez nutnosti programování.",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": true,
+                        "desktop": "dle projektu",
+                        "mobile": "dle projektu"
+                    }
+                },
+                {
+                    "key": "roles",
+                    "label": "Uživatelské role a oprávnění",
+                    "tooltip": "Různí uživatelé mají různá práva — kdo může co vidět nebo upravovat.",
+                    "values": {
+                        "web-presentation": false,
+                        "web-app": true,
+                        "desktop": true,
+                        "mobile": "dle projektu"
+                    }
+                },
+                {
+                    "key": "api",
+                    "label": "Napojení na externí systémy",
+                    "tooltip": "Propojení s ERP, účetnictvím, platební bránou nebo libovolným API.",
+                    "values": {
+                        "web-presentation": false,
+                        "web-app": true,
+                        "desktop": "dle projektu",
+                        "mobile": true
+                    }
+                },
+                {
+                    "key": "offline",
+                    "label": "Offline režim",
+                    "tooltip": "Aplikace funguje i bez připojení k internetu, data se synchronizují po obnovení připojení.",
+                    "values": {
+                        "web-presentation": false,
+                        "web-app": false,
+                        "desktop": "dle projektu",
+                        "mobile": "dle projektu"
+                    }
+                },
+                {
+                    "key": "store_publish",
+                    "label": "Publikace do App Store \/ Google Play",
+                    "values": {
+                        "web-presentation": false,
+                        "web-app": false,
+                        "desktop": false,
+                        "mobile": true
+                    }
+                },
+                {
+                    "key": "reporting",
+                    "label": "Reporting a statistiky",
+                    "tooltip": "Přehledy a grafy nad daty systému pro vyhodnocování výkonu.",
+                    "values": {
+                        "web-presentation": false,
+                        "web-app": true,
+                        "desktop": "dle projektu",
+                        "mobile": false
+                    }
+                },
+                {
+                    "key": "seo",
+                    "label": "SEO optimalizace",
+                    "tooltip": "Technická optimalizace pro vyhledávače jako Google.",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": "dle projektu",
+                        "desktop": false,
+                        "mobile": false
+                    }
+                },
+                {
+                    "key": "documentation",
+                    "label": "Technická dokumentace + manuál",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": true,
+                        "desktop": true,
+                        "mobile": true
+                    }
+                },
+                {
+                    "key": "support",
+                    "label": "Podpora a údržba po spuštění",
+                    "values": {
+                        "web-presentation": true,
+                        "web-app": true,
+                        "desktop": true,
+                        "mobile": true
+                    }
+                }
+            ]
+        },
+        "consultation": {
+            "eyebrow": "Nezávazně",
+            "header": "Poraďte se s námi",
+            "free_header": "Konzultace zdarma",
+            "free_text": "Řešíte, jakým směrem posunout své podnikání online? Probereme spolu vaši situaci a společně najdeme řešení, které dává smysl — bez závazků a bez tlaku na objednávku.",
+            "free_button": "Navrhněte termín",
+            "audit_header": "Audit systému",
+            "audit_text": "Máte web, e-shop nebo aplikaci, která už neodpovídá vašim potřebám, ale nejste si jistí proč? Projdeme systém do hloubky a připravíme přehlednou zprávu s riziky, slabými místy a konkrétními kroky ke zlepšení.",
+            "audit_button": "Poptávka od 4999 Kč"
+        },
+        "colab": {
+            "colab_procces_header": "Průběh spolupráce",
+            "item_1": {
+                "header": "První kontakt",
+                "text": "Napíšete nám nebo zavoláte. Zjistíme základní představu o projektu a domluvíme další postup."
+            },
+            "item_2": {
+                "header": "Vyplnění poptávky",
+                "text": "Zašleme vám strukturovaný dotazník. Pomůže nám pochopit rozsah, cíle a specifika projektu ještě před schůzkou."
+            },
+            "item_3": {
+                "header": "Schůzka a strategie",
+                "text": "Sejdeme se osobně nebo online. Probereme projekt do hloubky — technologie, rozsah, časový rámec a cenu."
+            },
+            "item_4": {
+                "header": "Podpis smlouvy",
+                "text": "Odsouhlasíme podmínky spolupráce a podepíšeme smlouvu. Tím projekt oficiálně začíná."
+            },
+            "item_5": {
+                "header": "Přístup do projektového portálu",
+                "text": "Získáte přístup do vaší projektové sekce, kde průběžně sledujete stav vývoje, milníky a komunikaci s týmem."
+            },
+            "item_6": {
+                "header": "Vývoj a dokončení",
+                "text": "Realizujeme projekt krok po kroku. O průběhu vás pravidelně informujeme a vy máte vždy přehled, co se děje."
+            },
+            "item_7": {
+                "header": "Předání a školení",
+                "text": "Předáme hotové řešení včetně technické dokumentace a uživatelského manuálu. Provedeme vás ovládáním, abyste byli od prvního dne samostatní."
+            },
+            "item_8": {
+                "header": "Podpora a údržba",
+                "text": "Po spuštění jsme stále k dispozici. Řešíme opravy, bezpečnostní aktualizace a další rozvoj — takže váš systém funguje spolehlivě i za rok."
+            }
+        }
+    },
+    "home": {
+        "knowlegde_base_btn": "Znalostní báze",
+        "sys_features": {
+            "header": "Co obsahují naše systémy",
+            "lead": "Každý systém stavíme s důrazem na bezpečnost, výkon a dlouhodobou udržitelnost. Tady je co dostanete jako standard.",
+            "demo_video_label": "Ukázka administračního rozhraní",
+            "demo_video_placeholder": "Video bude brzy k dispozici",
+            "seo": {
+                "label": "Logování",
+                "desc": "Každá akce ve všech částech systému je zaznamenána pro případný audit nebo analýzu."
+            },
+            "auth": {
+                "label": "Autentizace a role",
+                "desc": "Při každém přihlášení proběhne řada bezpečnostních kontrol. Správa uživatelů a přístupových oprávnění je součástí každého systému."
+            },
+            "middleware": {
+                "label": "Administrační rozhraní",
+                "desc": "Vlastní admin panel pro správu obsahu, uživatelů a nastavení bez nutnosti znalosti programování."
+            },
+            "attack_protection": {
+                "label": "Ochrana proti útokům",
+                "desc": "Prevence SQL injection, XSS, CSRF a dalších běžných bezpečnostních hrozeb je součástí každého projektu."
+            },
+            "documentation": {
+                "label": "Technická dokumentace",
+                "desc": "Každý projekt předáváme s technickou dokumentací a uživatelským manuálem jako standard."
+            },
+            "integrations": {
+                "label": "Integrace API",
+                "desc": "Napojení na ERP, účetnictví, platební brány nebo libovolné externí systémy a služby."
+            },
+            "responsive": {
+                "label": "Responzivní design",
+                "desc": "Plná funkčnost na počítači, tabletu i mobilu. Žádné kompromisy na menších obrazovkách."
+            },
+            "support": {
+                "label": "Podpora po spuštění",
+                "desc": "Technická podpora a údržba i po předání projektu. Nejsme firma, která zmizí po odevzdání."
+            }
+        },
+        "hero": {
+            "heading": "Jsme IT společnost,<br>která staví digitální produkty",
+            "lead": "Navrhujeme, vyvíjíme a nasazujeme webové, desktopové i mobilní aplikace – od prvního nápadu až po ostrý provoz.",
+            "cta_primary": "Kontakt",
+            "cta_secondary": "Naše služby",
+            "stat_1_num": "4 roky",
+            "stat_1_label": "na trhu",
+            "stat_2_num": "10+",
+            "stat_2_label": "dokončených projektů"
+        },
+        "faq": {
+            "heading": "Než napíšete, možná už tu je odpověď",
+            "q1": "Jak dlouho trvá vývoj typického projektu?",
+            "a1": "Záleží na rozsahu — jednodušší weby zvládneme za pár týdnů, komplexnější aplikace obvykle trvají 2–4 měsíce. Přesný odhad dostanete po nezávazné konzultaci.",
+            "q2": "Kolik stojí vývoj webové nebo mobilní aplikace?",
+            "a2": "Cena se odvíjí od rozsahu a použitých technologií. Orientační ceník najdete na stránce Služby, konkrétní nabídku připravíme na míru po konzultaci zdarma.",
+            "q3": "Poskytujete podporu i po dokončení projektu?",
+            "a3": "Ano, po nasazení nabízíme servisní podporu a další rozvoj podle domluvy — od drobných úprav až po dlouhodobou spolupráci.",
+            "q4": "Umíte pracovat i s naším stávajícím systémem?",
+            "a4": "Ano, běžně navazujeme na existující řešení, propojujeme systémy přes API a postupně je modernizujeme, aniž by musel provoz stát.",
+            "more_link": "Zobrazit všechny otázky"
+        },
+        "stats_projects_text": "Tým",
+        "stats_projects_count": "1",
+        "stats_years_text": "Roky Vývoje",
+        "stats_years_count": "4",
+        "stats_solutions_text": "Řešení",
+        "stats_solutions_count": "∞",
+        "about": {
+            "story_heading": "Stavíme software, který vaší firmě opravdu pomáhá růst",
+            "story_text": "Nejsme agentura, která vám jen postaví web a pak zmizí. Věnujeme se vývoji na míru napříč weby, desktopovými i mobilními aplikacemi a řešeními postavenými na umělé inteligenci - vždy s důrazem na to, aby výsledek reálně řešil váš konkrétní problém, ne aby jen dobře vypadal v prezentaci. Od prvního rozhovoru přes návrh architektury až po nasazení a dlouhodobou podporu jsme s vámi po celou dobu jako jeden tým.",
+            "heading": "Vývoj na míru,<br>od nápadu po nasazení",
+            "lead": "Nejsme agentura šablon. Každý projekt stavíme od základu — přesně tak, jak to váš byznys potřebuje."
+        },
+        "tech_stack": {
+            "heading": "Technologie, na kterých stavíme",
+            "lead": "Moderní a ověřené nástroje s dlouhodobou podporou – váš projekt nebude záviset na technologii, která za dva roky zmizí.",
+            "sr_list_label": "Používané technologie"
+        },
+        "cta": {
+            "references": {
+                "text": "Podívejte se na realizované projekty a inspirujte se.",
+                "btn": "Naše realizace"
+            },
+            "contact": {
+                "text": "Kontaktujte nás a probereme váš projekt zdarma.",
+                "btn": "Kontaktovat nás"
+            }
+        }
+    },
+    "about_us": {
+        "header": "O nás",
+        "hero_sub": "Digitální studio zaměřené na tvorbu moderních produktů — od webu po AI.",
+        "paragraph_1": "Společnost RegioPartner s.r.o. působí více jak 20 let v oblasti evaluací a plánování regionálního rozvoje. Zaměřujeme se na hodnocení programů a projektů financovaných z veřejných zdrojů a strategické plánování rozvoje území. Díky těmto zkušenostem jsme si vybudovali stabilní zázemí a odborné know-how, na kterém postupně stavíme i nové aktivity.",
+        "paragraph_2": "V roce 2023 jsme proto založili novou divizi RPsoftware, která rozšiřuje činnost společnosti směrem k moderním technologiím. RPsoftware navazuje na předchozí IT podporu poskytovanou kmenové firmě v oblasti dotazníkových šetření, statistického zpracování dat a dalších IT produktů. Nově se zaměřuje na vývoj softwaru a poskytování digitálních řešení zejména pro menší a střední podniky a také pro jednotlivce, kteří potřebují spolehlivého partnera pro své IT projekty.",
+        "paragraph_3": "Naším cílem je přinášet software, který je nejen technicky kvalitní, ale také přizpůsobený konkrétním potřebám uživatelů. Zajišťujeme kompletní služby – od analýzy a návrhy řešení přes samotný vývoj až po testování, implementaci a dlouhodobou podporu.",
+        "paragraph_4": "RPsoftware funguje pod hlavičkou RegioPartner s.r.o., což znamená, že vychází ze stejného profesionálního zázemí a hodnot, ale zároveň představuje specializovanou divizi soustředěnou výhradně na IT oblast. Spojení obou částí společnosti nám umožňuje kombinovat zkušenosti z evaluací a plánování rozvoje ve veřejném prostoru s technologickými možnostmi a nabízet tak služby, které mají širší kontext a přidanou hodnotu.",
+        "milestones": {
+            "heading": "Od založení divize po dnešek",
+            "m1": {
+                "year": "2022",
+                "title": "Vznik IT divize",
+                "text": "RPSW vzniká jako softwarová divize skupiny RegioPartner, s.r.o., navazující na patnáctiletou historii mateřské firmy."
+            },
+            "m2": {
+                "year": "2022–2023",
+                "title": "Budování infrastruktury",
+                "text": "Stavíme interní procesy, technologické zázemí a tým — základ, na kterém dnes stojí každý dodaný projekt."
+            },
+            "m3": {
+                "year": "2024",
+                "title": "První zakázky navenek",
+                "text": "Otevíráme se klientům mimo mateřskou firmu a dodáváme první weby, aplikace a AI řešení na míru."
+            },
+            "m4": {
+                "year": "Dnes",
+                "title": "Stabilní tým, rostoucí portfolio",
+                "text": "Kombinujeme zázemí zavedené firmy s pružností menšího týmu a dál rozšiřujeme portfolio dokončených projektů."
+            }
+        },
+        "cta": {
+            "ref_text": "Podívejte se na naše realizované projekty.",
+            "ref_btn": "Reference",
+            "contact_text": "Připraveni začít spolupráci?",
+            "contact_btn": "Kontaktujte nás"
+        }
+    },
+    "order_form": {
+        "side_label": "OBJEDNÁVKA",
+        "brand_headline": "Dokončeme<br>vaši objednávku.",
+        "brand_sub": "Doplňte údaje a přiložte podklady — technik se vám ozve a domluví další postup.",
+        "attachment_uploader": {
+            "limits_hint": "(max. {max} souborů, {maxMb} MB/soubor, {totalMb} MB celkem)",
+            "existing_section_title": "Již nahrané přílohy ({count})",
+            "remove_existing_title": "Odebrat přílohu",
+            "dropzone_label": "↑ Vyberte soubory nebo je přetáhněte sem",
+            "error_max_files_with_existing": "Můžete mít nahráno maximálně {max} souborů (včetně {existing} již existujících).",
+            "error_max_files": "Můžete nahrát maximálně {max} souborů.",
+            "error_file_too_large": "Soubor \"{filename}\" přesahuje limit {maxMb} MB.",
+            "error_total_size_exceeded": "Celková velikost příloh nesmí přesáhnout {maxMb} MB.",
+            "total_label": "Celkem: {count} \/ {max} souborů",
+            "total_new_suffix": "({size} nových)",
+            "error_file_type": "Soubor \"{filename}\" nelze nahrát – typ {ext} není povolen.",
+            "allowed_types_hint": "Povolené typy: {types}"
+        },
+        "header": "Poptávkový formulář",
+        "labels": {
+            "name": "Jméno klienta",
+            "ico": "IČO",
+            "address": "Adresa klienta",
+            "phone": "Telefon klienta",
+            "email": "Email klienta",
+            "description": "Detailní popis objednávky",
+            "attachment": "Příloha",
+            "gdpr_consent": "Souhlasím se zpracováním osobních údajů",
+            "gdpr_link": "Zásady ochrany osobních údajů",
+            "tos_consent": "Souhlasím s obchodními podmínkami",
+            "tos_link": "Všeobecné obchodní podmínky (TOS)",
+            "required_info": "* Označuje povinné pole"
+        },
+        "placeholders": {
+            "phone": "+420..."
+        },
+        "errors": {
+            "ico_pattern": "IČO musí obsahovat pouze číslice.",
+            "phone_pattern": "Pouze číslice a \"+\" na začátku.",
+            "phone_max": "Maximální délka je 20 znaků.",
+            "email_invalid": "Zadejte platný email.",
+            "submit_error": "Omlouváme se, objednávku se nepodařilo odeslat.",
+            "too_many_requests": "Příliš mnoho pokusů. Zkuste to prosím za chvíli znovu.",
+            "attachment_rejected": "Některou z příloh server odmítl (nepovolený typ nebo velikost). Zkontrolujte přílohy a odešlete formulář znovu.",
+            "captcha_failed": "Ověření, že nejste robot, se nezdařilo nebo vypršelo. Potvrďte ho prosím znovu a odešlete formulář.",
+            "captcha_load": "Ověření, že nejste robot, se nepodařilo načíst. Obnovte prosím stránku, případně povolte obsah z challenges.cloudflare.com.",
+            "email_limit": "Pro tuto e-mailovou adresu jsme v poslední době přijali už několik objednávek. Další můžete odeslat později, případně nás kontaktujte telefonicky."
+        },
+        "buttons": {
+            "send": "Odeslat poptávku",
+            "sending": "Odesílám...",
+            "go_home": "Odejít domů"
+        },
+        "thank_you": {
+            "title": "Děkujeme za odeslání poptávky",
+            "text": "V nejbližší době vás bude kontaktovat technik, který s vámi dohodne konkrétní řešení."
+        },
+        "link_states": {
+            "loading": "Ověřuji odkaz…",
+            "invalid_title": "Odkaz je neplatný",
+            "invalid_text": "Tento odkaz na objednávkový formulář neexistuje nebo byl odstraněn. Kontaktujte prosím svého obchodního zástupce.",
+            "used_title": "Formulář již byl odeslán",
+            "used_text": "Tento odkaz je jednorázový a už byl použit. Pokud potřebujete něco doplnit, kontaktujte prosím svého obchodního zástupce.",
+            "expired_title": "Platnost odkazu vypršela",
+            "expired_text": "Odkaz na objednávkový formulář platí 30 dní a jeho platnost už skončila. Požádejte prosím svého obchodního zástupce o nový odkaz."
+        }
+    },
+    "jobs": {
+        "list_hero_eyebrow": "Kariéra",
+        "list_header_1": "Kariéra",
+        "list_hero_sub": "Hledáme nadšené lidi, kteří chtějí tvořit produkty, na které budou hrdí.",
+        "list_section_label": "Otevřené pozice",
+        "list_cta_eyebrow": "Nenašli jste shodu?",
+        "list_write_us_prompt": "Napište nám",
+        "list_cta_sub": "Zasílejte spontánní přihlášky — vždy rádi poznáme výjimečné lidi.",
+        "list_cta_email_btn": "Napsat e-mail",
+        "back_link": "Zpět na výpis pozic",
+        "not_found": "Pozice nebyla nalezena",
+        "error_eyebrow": "Chyba",
+        "item_hero_eyebrow": "Otevřená pozice",
+        "item_meta_type": "Plný úvazek",
+        "item_meta_location": "Praha \/ Remote",
+        "item_desc_label": "O pozici",
+        "item_contact_label": "Máte dotaz?",
+        "form_eyebrow": "Přihláška",
+        "form_title": "Mám zájem o tuto pozici",
+        "form_first_name_label": "Jméno",
+        "form_first_name_placeholder": "Jan",
+        "form_first_name_error": "Jméno je povinné.",
+        "form_last_name_label": "Příjmení",
+        "form_last_name_placeholder": "Novák",
+        "form_last_name_error": "Příjmení je povinné.",
+        "form_email_label": "E-mail",
+        "form_email_placeholder": "jan@priklad.cz",
+        "form_email_required_error": "E-mail je povinný.",
+        "form_email_invalid_error": "Zadejte platnou e-mailovou adresu.",
+        "form_phone_label": "Telefon",
+        "form_phone_placeholder": "+420 123 456 789",
+        "form_message_label": "Zpráva \/ průvodní dopis",
+        "form_message_placeholder": "Co vás na pozici zaujalo?",
+        "form_cv_label": "Životopis",
+        "form_cv_placeholder": "Klikněte nebo přetáhněte soubor",
+        "form_cv_error": "Prosím přiložte životopis.",
+        "form_gdpr_text": "Souhlasím se",
+        "form_gdpr_link_text": "zpracováním osobních údajů",
+        "form_submit_btn": "Odeslat přihlášku",
+        "form_submitting": "Odesílám…",
+        "form_error_generic": "Omlouváme se, přihlášku se nepodařilo odeslat. Zkuste to prosím později.",
+        "success_title": "Děkujeme!",
+        "success_text_before": "Vaše přihláška na pozici",
+        "success_text_after": "byla odeslána. Budeme vás kontaktovat co nejdříve.",
+        "success_back_btn": "Zpět na výpis pozic",
+        "job_1_id": "ui-designer",
+        "job_1_title": "UI\/UX Designer",
+        "job_1_short_desc": "Tvorba UI designu z domova s prostorem pro kreativitu. Hledáme spolehlivé parťáky se znalostí webové filozofie.",
+        "job_2_id": "sales-rep",
+        "job_2_title": "Obchodní zástupce",
+        "job_2_short_desc": "Sjednávání nabídek s vysokou mírou samostatnosti. Ideální pro komunikativní lidi se znalostí sociálních sítí.",
+        "ui-designer": {
+            "title": "UI\/UX Designer",
+            "content": "Aktuálně otevíráme prostor pro kreativního grafika se zaměřením na UI, který má vášeň pro čistou estetiku a moderní vizuální styl. Tato role je ideální pro studenty (VŠ i SŠ technického směru), kteří hledají maximální flexibilitu a chtějí realizovat své grafické nápady plně v režimu home-office.<br><br><strong>Klíčové odpovědnosti:<\/strong><br>• Kompletní vizuální návrh uživatelských rozhraní v nástrojích jako Figma, Adobe XD nebo Photoshop.<br>• Převádění projektové dokumentace a skic do čistých, moderních a přehledných grafických výstupů.<br>• Práce s barvami, typografií a kompozicí tak, aby byl web nejen krásný, ale i funkční.<br>• Příprava grafických podkladů pro následný vývoj.<br><br><strong>Co od vás vyžadujeme:<\/strong><br>• Věk 18+ a studium nebo absolvování technické SŠ\/VŠ (se zájmem o IT a design).<br>• Pokročilou znalost práce ve Figmě nebo Photoshopu a cit pro detail.<br>• Základní povědomí o webové filozofii (jak se prvky na webu chovají).<br>• Spolehlivost a schopnost samostatně tvořit v domluvených termínech.<br><br><strong>Na co se můžete těšit:<\/strong><br>• Flexibilní spolupráce na DPP s možností plné práce z domova (home-office).<br>• Volný pracovní rozvrh, který si plně přizpůsobíte svým časovým možnostem."
+        },
+        "sales-rep": {
+            "title": "Obchodní zástupce",
+            "content": "Hledáme energického a samostatného kolegu pro Business Development, který nám pomůže identifikovat nové obchodní příležitosti a rozšiřovat naše klientské portfolio. Pokud máte vynikající komunikační dovednosti a baví vás propojovat technická řešení s potřebami klientů, hledáme právě vás.<br><br><strong>Vaše hlavní úkoly:<\/strong><br>• Aktivní vyhledávání nových klientských segmentů a navazování prvotních obchodních kontaktů.<br>• Profesionální sjednávání nabídek a prezentace našich služeb jako moderního technologického partnera.<br>• Budování vztahů s klíčovými klienty a partnery.<br><br><strong>Očekávaný profil kandidáta:<\/strong><br>• Věk 18+ a reprezentativní vystupování v online i osobní komunikaci.<br>• Vysoká míra vnitřní disciplíny, samostatnosti a schopnost efektivního self-managementu.<br>• Znalost prostředí sociálních sítí jako nástroje pro moderní obchod je velkou výhodou.<br>• Schopnost jasně a srozumitelně interpretovat i složitější technická řešení.<br><br><strong>Na co se můžete těšit:<\/strong><br>• Flexibilní spolupráce na DPP s možností plné práce z domova (home-office).<br>• Volný pracovní rozvrh, který si plně přizpůsobíte svým časovým možnostem."
+        },
+        "form_first_name_pattern_error": "Jméno nesmí obsahovat čísla ani speciální znaky.",
+        "form_last_name_pattern_error": "Příjmení nesmí obsahovat čísla ani speciální znaky.",
+        "form_phone_pattern_error": "Telefon smí obsahovat jen číslice a běžné oddělovače (+, mezera, závorky, pomlčka).",
+        "form_cv_size_error": "Soubor je příliš velký. Maximální velikost je 20 MB.",
+        "form_cv_type_error": "Tento typ souboru nelze nahrát. Povolené typy: {types}",
+        "form_too_many_requests": "Příliš mnoho pokusů. Zkuste to prosím za chvíli znovu.",
+        "form_captcha_failed": "Ověření, že nejste robot, se nezdařilo nebo vypršelo. Potvrďte ho prosím znovu a odešlete formulář.",
+        "form_captcha_load": "Ověření, že nejste robot, se nepodařilo načíst. Obnovte prosím stránku, případně povolte obsah z challenges.cloudflare.com.",
+        "form_email_limit": "Pro tuto e-mailovou adresu jsme v poslední době přijali už několik přihlášek. Další můžete odeslat později, případně nás kontaktujte e-mailem."
+    },
+    "contact": {
+        "attachment_uploader": {
+            "limits_hint": "(max. {max} souborů, {maxMb} MB/soubor, {totalMb} MB celkem)",
+            "existing_section_title": "Již nahrané přílohy ({count})",
+            "remove_existing_title": "Odebrat přílohu",
+            "dropzone_label": "↑ Vyberte soubory nebo je přetáhněte sem",
+            "error_max_files_with_existing": "Můžete mít nahráno maximálně {max} souborů (včetně {existing} již existujících).",
+            "error_max_files": "Můžete nahrát maximálně {max} souborů.",
+            "error_file_too_large": "Soubor \"{filename}\" přesahuje limit {maxMb} MB.",
+            "error_total_size_exceeded": "Celková velikost příloh nesmí přesáhnout {maxMb} MB.",
+            "total_label": "Celkem: {count} \/ {max} souborů",
+            "total_new_suffix": "({size} nových)",
+            "error_file_type": "Soubor \"{filename}\" nelze nahrát – typ {ext} není povolen.",
+            "allowed_types_hint": "Povolené typy: {types}"
+        },
+        "side_label": "KONTAKT",
+        "brand_headline": "Pojďme<br>spolupracovat.",
+        "brand_sub": "Rádi si vyslechneme váš nápad — od prvního hovoru po spuštění produktu.",
+        "form_title": "Poptávkový formulář",
+        "labels": {
+            "subject": "Téma",
+            "email": "E-mail",
+            "phone": "Telefon",
+            "message": "Zpráva",
+            "attachment": "Příloha",
+            "gdpr_consent": "Souhlasím se",
+            "gdpr_link": "zpracováním osobních údajů"
+        },
+        "options": {
+            "placeholder": "Vyberte téma…",
+            "new_project": "Nový projekt \/ poptávka",
+            "support": "Podpora stávajícího projektu",
+            "careers": "Spolupráce \/ kariéra",
+            "other": "Jiný dotaz"
+        },
+        "placeholders": {
+            "email": "vas@email.cz",
+            "phone": "+420 123 456 789",
+            "message": "Popište váš projekt — čím více detailů, tím přesnější nabídku připravíme."
+        },
+        "errors": {
+            "subject_required": "Vyberte prosím téma zprávy.",
+            "email_invalid": "Zadejte platný e-mail.",
+            "phone_pattern": "Zadejte platný formát čísla (např. +420123456789, jen číslice a volitelné + na začátku).",
+            "phone_max": "Telefonní číslo je příliš dlouhé (max. 20 znaků).",
+            "message_required": "Zpráva je povinná.",
+            "message_minlength": "Zpráva musí mít alespoň 10 znaků.",
+            "message_maxlength": "Zpráva nesmí mít více než 10 000 znaků.",
+            "submit_error": "Odeslání se nezdařilo. Zkuste to prosím znovu.",
+            "submit_error_title": "Odeslání se nezdařilo",
+            "too_many_requests": "Příliš mnoho pokusů. Zkuste to prosím za chvíli znovu.",
+            "attachment_rejected": "Některou z příloh server odmítl (nepovolený typ nebo velikost). Zkontrolujte přílohy a odešlete formulář znovu.",
+            "captcha_failed": "Ověření, že nejste robot, se nezdařilo nebo vypršelo. Potvrďte ho prosím znovu a odešlete formulář.",
+            "captcha_load": "Ověření, že nejste robot, se nepodařilo načíst. Obnovte prosím stránku, případně povolte obsah z challenges.cloudflare.com.",
+            "email_limit": "Pro tuto e-mailovou adresu jsme v poslední době přijali už několik zpráv. Další můžete odeslat později, případně nás kontaktujte telefonicky."
+        },
+        "buttons": {
+            "send": "Odeslat poptávku",
+            "sending": "Odesílám…",
+            "go_home": "← Zpět na hlavní stránku"
+        },
+        "thank_you": {
+            "title": "Děkujeme!",
+            "text": "Vaši zprávu jsme obdrželi. Obvykle odpovídáme do 48 hodin — nejpozději v příštím pracovním dni."
+        }
+    },
+    "not_found": {
+        "header": "Stránka nenalezena",
+        "text": "Tady nic není, ale naše domovská stránka toho nabízí hodně.",
+        "button": "Zpět na hlavní stránku"
+    },
+    "privacy_policy": {
+        "header_main": "Zásady Ochrany Osobních Údajů",
+        "last_update_text": "Poslední aktualizace:",
+        "effective_from_text": "Tyto zásady jsou účinné od {date}."
+    },
+    "tos": {
+        "header_main": "Obchodní podmínky",
+        "last_update_text": "Poslední aktualizace:",
+        "more_info_text": "Více informací naleznete v",
+        "more_info_link_text": "Zásadách ochrany osobních údajů",
+        "effective_from_text": "Tyto podmínky jsou účinné od {date}."
+    },
+    "cookie_consent": {
+        "aria_label": "Nastavení souhlasu s cookies",
+        "title": "Používáme cookies",
+        "description": "Používáme cookies pro zajištění funkčnosti webu a s vaším souhlasem i pro analytické a marketingové účely. Podrobnosti najdete v našich zásadách používání cookies.",
+        "btn_settings": "Nastavení",
+        "btn_necessary_only": "Jen nezbytné",
+        "btn_accept_all": "Přijmout vše",
+        "btn_back": "Zpět",
+        "btn_save_settings": "Uložit nastavení",
+        "settings_title": "Nastavení souhlasu s cookies",
+        "settings_desc": "Vyberte, které kategorie cookies chcete povolit. Nezbytné cookies nelze vypnout, protože bez nich by web nefungoval správně.",
+        "cat_necessary": {
+            "label": "Nezbytné",
+            "desc": "Nutné pro základní fungování webu (např. zapamatování vašich předvoleb). Bez těchto cookies web nemůže správně fungovat."
+        },
+        "cat_functional": {
+            "label": "Funkční",
+            "desc": "Umožňují si web zapamatovat vaše nastavení (např. zvolený jazyk) a nabídnout vám pohodlnější prohlížení."
+        },
+        "cat_analytics": {
+            "label": "Analytické",
+            "desc": "Pomáhají nám pochopit, jak návštěvníci web používají, abychom ho mohli postupně vylepšovat (např. Google Analytics)."
+        },
+        "cat_marketing": {
+            "label": "Marketingové",
+            "desc": "Používají se k zobrazování relevantnější reklamy na základě vašeho zájmu, a to i na jiných webech."
+        }
+    },
+    "cookies_policy": {
+        "header_main": "Zásady používání cookies",
+        "last_update_text": "Poslední aktualizace:",
+        "change_settings_text": "Svůj souhlas s jednotlivými kategoriemi cookies můžete kdykoli změnit přes",
+        "change_settings_link_text": "nastavení cookies",
+        "more_info_text": "Podrobnosti o zpracování osobních údajů najdete v našich",
+        "more_info_link_text": "zásadách ochrany osobních údajů",
+        "effective_from_text": "Tyto zásady jsou účinné od {date}."
+    },
+    "knowledge-base": {
+        "knowledge-base_footer": "Centrum nápovědy",
+        "hero": {
+            "eyebrow": "Dokumentace pro klienty",
+            "heading": "Co všechno váš systém obsahuje",
+            "lead": "Tato stránka srozumitelně vysvětluje, co je součástí každého systému, který u nás objednáte - od zabezpečení přes administraci až po hosting a technickou podporu. Bez zbytečného žargonu."
+        },
+        "sections": {
+            "security": {
+                "eyebrow": "Bezpečnost",
+                "header": "Zabezpečení a ochrana dat",
+                "lead": "Bezpečnost není doplněk, který se řeší až na konci - je součástí návrhu systému od prvního dne. Níže najdete přehled hlavních opatření, která u každého projektu standardně používáme.",
+                "item_1": {
+                    "title": "Zabezpečené přihlašování",
+                    "text": "Hesla se nikdy neukládají v čitelné podobě - jsou zpracována jednosměrným šifrováním (hashováním), takže je nikdo, ani my, nevidí. U administrace navíc nabízíme dvoufaktorové ověření (2FA), které přidává druhý ověřovací krok navíc k heslu."
+                },
+                "item_2": {
+                    "title": "Šifrovaná komunikace (HTTPS\/SSL)",
+                    "text": "Veškerá komunikace mezi prohlížečem uživatele a serverem je šifrovaná pomocí certifikátu SSL\/TLS. Data přenášená mezi vaším počítačem a serverem tak nelze cestou odposlechnout ani upravit."
+                },
+                "item_3": {
+                    "title": "Vícevrstvá kontrola požadavků",
+                    "text": "Každý požadavek na server prochází sérií bezpečnostních kontrol (middleware), než se vůbec dostane k datům. Neoprávněné nebo podezřelé požadavky se tak zastaví hned na začátku, dřív, než mohou způsobit škodu."
+                },
+                "item_4": {
+                    "title": "Ochrana proti běžným typům útoků",
+                    "text": "Systém je navržen odolný proti běžně známým typům útoků na webové aplikace a proti automatizovanému zkoušení hesel. Používáme stejné bezpečnostní principy, jaké najdete u bank a velkých online služeb."
+                }
+            },
+            "legal": {
+                "eyebrow": "Právní soulad",
+                "header": "GDPR a soulad s právem EU",
+                "lead": "Systém je od návrhu stavěný tak, aby respektoval evropskou legislativu na ochranu osobních údajů (GDPR) a další relevantní právní požadavky platné v EU.",
+                "item_1": {
+                    "title": "Zpracování osobních údajů",
+                    "text": "Formuláře, registrace a další místa, kde se sbírají osobní údaje, obsahují jasný souhlas se zpracováním a odkaz na zásady ochrany osobních údajů, přesně podle požadavků GDPR."
+                },
+                "item_2": {
+                    "title": "Cookies a souhlas návštěvníka",
+                    "text": "Web obsahuje cookie lištu, která rozlišuje nezbytné, funkční, analytické a marketingové cookies - a analytické či marketingové skripty se spouští až po udělení souhlasu, ne dřív."
+                },
+                "item_3": {
+                    "title": "Právo na výmaz a přístup k datům",
+                    "text": "Systém je navržen tak, aby umožňoval vyřídit žádosti uživatelů týkající se jejich osobních údajů - například jejich export nebo smazání, v souladu s právy, která GDPR uživatelům garantuje."
+                },
+                "item_4": {
+                    "title": "Uložení dat v rámci EU",
+                    "text": "Data jsou standardně ukládána na serverech v rámci Evropské unie, takže se na ně vztahuje evropská jurisdikce a evropské standardy ochrany dat."
+                }
+            },
+            "admin": {
+                "eyebrow": "Administrace",
+                "header": "Vlastní administrační rozhraní",
+                "lead": "Ke každému systému dostanete přehlednou administraci, přes kterou spravujete obsah, objednávky i uživatele - bez nutnosti znát programování.",
+                "item_1": {
+                    "title": "Oddělená sekce Web a Shop",
+                    "text": "Administrace je logicky rozdělena na dvě části - správu veřejné prezentace (texty, stránky, obsah) a správu e-shopu (produkty, objednávky, sklad, platby). Každá část má vlastní přehledné menu."
+                },
+                "item_2": {
+                    "title": "Uživatelské role a oprávnění",
+                    "text": "Můžete nastavit, kdo v administraci co vidí a co smí upravovat - například administrátor vidí a upravuje vše, zatímco běžný zaměstnanec má přístup jen k vybrané části systému."
+                },
+                "item_3": {
+                    "title": "Správa obsahu bez zásahu programátora",
+                    "text": "Texty, obrázky, produkty i další obsah upravujete přímo v administraci. Pro běžné změny obsahu tak nepotřebujete volat vývojáře."
+                },
+                "item_4": {
+                    "title": "Přehledy a reporting",
+                    "text": "Administrace zobrazuje základní přehledy a statistiky (např. objednávky, poptávky, návštěvnost formulářů), takže máte o dění na webu jasný přehled na jednom místě."
+                }
+            },
+            "ui_ux": {
+                "eyebrow": "Design",
+                "header": "UI\/UX - vzhled a použitelnost",
+                "lead": "Systém není jen funkční, ale je i příjemný na používání - jak pro návštěvníky webu, tak pro vás v administraci.",
+                "item_1": {
+                    "title": "Responzivní design",
+                    "text": "Web se automaticky přizpůsobí jakémukoliv zařízení - mobilnímu telefonu, tabletu i velkému monitoru. Vzhled i funkčnost zůstávají zachované na všech rozlišeních."
+                },
+                "item_2": {
+                    "title": "Intuitivní navigace",
+                    "text": "Struktura webu i administrace je navržena tak, aby se v ní uživatel zorientoval bez nutnosti návodu - logické menu, jasné popisky a konzistentní rozmístění prvků."
+                },
+                "item_3": {
+                    "title": "Rychlé načítání",
+                    "text": "Grafické prvky, obrázky i skripty jsou optimalizované tak, aby se stránky načítaly rychle - to zlepšuje uživatelský zážitek i pozici webu ve vyhledávačích."
+                },
+                "item_4": {
+                    "title": "Přístupnost (accessibility)",
+                    "text": "Dbáme na dostatečný kontrast textu, popisky pro čtečky obrazovky a ovládání pomocí klávesnice, aby byl web použitelný pro co nejširší okruh návštěvníků."
+                }
+            },
+            "database": {
+                "eyebrow": "Data",
+                "header": "Databáze",
+                "lead": "Veškerý obsah, objednávky a uživatelské účty jsou uloženy v relační databázi - osvědčeném a stabilním způsobu ukládání dat, který používá naprostá většina moderních webových systémů.",
+                "item_1": {
+                    "title": "Relační databáze",
+                    "text": "Data jsou strukturovaná do přehledných, provázaných tabulek (např. produkty, objednávky, zákazníci). Díky tomu je systém přesný, konzistentní a snadno rozšiřitelný o nové funkce."
+                },
+                "item_2": {
+                    "title": "Integrita a konzistence dat",
+                    "text": "Databáze hlídá vazby mezi jednotlivými daty - například nejde smazat produkt, který je součástí existující objednávky, aniž by systém na tuto souvislost upozornil."
+                },
+                "item_3": {
+                    "title": "Pravidelné zálohování",
+                    "text": "Data jsou pravidelně zálohována, takže v případě neočekávané situace lze systém obnovit do funkčního stavu s minimální ztrátou dat."
+                },
+                "item_4": {
+                    "title": "Oddělení dat od aplikace",
+                    "text": "Databáze běží odděleně od zbytku aplikace, což zvyšuje bezpečnost i možnost systém do budoucna škálovat podle rostoucích nároků."
+                }
+            },
+            "api": {
+                "eyebrow": "Komunikace",
+                "header": "API - propojení webu a serveru",
+                "lead": "Frontend (to, co vidí návštěvník) a backend (server, který zpracovává data) spolu komunikují přes zabezpečené rozhraní API postavené na frameworku Laravel.",
+                "item_1": {
+                    "title": "Oddělený frontend a backend",
+                    "text": "Veřejný web, e-shop i administrace komunikují se serverem přes definované API. Toto oddělení zvyšuje přehlednost, bezpečnost i možnost budoucího rozšíření (např. o mobilní aplikaci)."
+                },
+                "item_2": {
+                    "title": "Ověřování každého požadavku",
+                    "text": "Každý požadavek na citlivá data (např. v administraci) je ověřen, že přichází od přihlášeného a oprávněného uživatele - nezalogovaný návštěvník se k datům nedostane."
+                },
+                "item_3": {
+                    "title": "Validace vstupních dat",
+                    "text": "Veškerá data odeslaná přes formuláře nebo administraci procházejí kontrolou správnosti a formátu ještě předtím, než se uloží do databáze - chybná nebo škodlivá data se tak k systému vůbec nedostanou."
+                },
+                "item_4": {
+                    "title": "Napojení na externí systémy",
+                    "text": "Stejný princip API využíváme i pro napojení na externí služby - platební brány, účetní systémy, e-mailing nebo jiné nástroje, které ve firmě už používáte."
+                }
+            },
+            "hosting": {
+                "eyebrow": "Provoz",
+                "header": "Hosting",
+                "lead": "Systém provozujeme na serverech od hostingového poskytovatele Forpsi, který patří mezi zavedené a spolehlivé poskytovatele hostingu v České republice.",
+                "item_1": {
+                    "title": "Server v rámci EU",
+                    "text": "Data jsou fyzicky uložena na serverech v rámci Evropské unie, což zjednodušuje soulad s GDPR a zaručuje předvídatelnou právní jurisdikci nad vašimi daty."
+                },
+                "item_2": {
+                    "title": "Dostupnost a spolehlivost",
+                    "text": "Hosting je navržen tak, aby zajišťoval vysokou dostupnost webu - tedy aby byl váš web přístupný pro zákazníky prakticky nepřetržitě."
+                },
+                "item_3": {
+                    "title": "SSL certifikát v ceně provozu",
+                    "text": "Součástí hostingu je platný SSL certifikát zajišťující šifrované připojení (HTTPS) mezi návštěvníkem a webem."
+                },
+                "item_4": {
+                    "title": "Sledování provozu",
+                    "text": "Provoz serveru je monitorován, takže případné výpadky nebo neobvyklé chování systému lze rychle odhalit a řešit."
+                }
+            },
+            "deployment": {
+                "eyebrow": "Nasazení",
+                "header": "Jak se aktualizace dostávají na server",
+                "lead": "Nové verze webu, opravy nebo nové funkce se na server nasazují kontrolovaným způsobem, aby nedošlo k výpadku ani ztrátě dat.",
+                "item_1": {
+                    "title": "Zabezpečený vzdálený přístup (SSH)",
+                    "text": "Přístup na server pro nasazení nových verzí probíhá přes šifrovaný protokol SSH, který zajišťuje, že komunikace mezi naším týmem a serverem je chráněná před odposlechem."
+                },
+                "item_2": {
+                    "title": "Přenos souborů (FTP\/SFTP)",
+                    "text": "Pro nahrávání souborů (např. obrázků nebo aktualizací) používáme zabezpečené protokoly pro přenos dat, které šifrují obsah přenášených souborů."
+                },
+                "item_3": {
+                    "title": "Testování před nasazením",
+                    "text": "Nové změny se nejprve otestují mimo ostrý provoz, aby se předešlo neočekávaným chybám na živém webu, který používají vaši zákazníci."
+                },
+                "item_4": {
+                    "title": "Verzování kódu",
+                    "text": "Veškerý zdrojový kód je verzovaný, tedy má vedenou historii všech změn. V případě potřeby se tak lze kdykoliv vrátit k předchozí funkční verzi systému."
+                }
+            },
+            "performance": {
+                "eyebrow": "Rychlost",
+                "header": "Výkon a škálovatelnost",
+                "lead": "Systém stavíme tak, aby zvládl nejen dnešní provoz, ale i budoucí růst návštěvnosti a rozšiřování funkcí.",
+                "item_1": {
+                    "title": "Optimalizace načítání",
+                    "text": "Obrázky, skripty i styly jsou optimalizovány tak, aby se stránka načítala co nejrychleji, i na pomalejším připojení."
+                },
+                "item_2": {
+                    "title": "Efektivní práce s daty",
+                    "text": "Databázové dotazy jsou navrženy s ohledem na výkon, takže systém zůstává rychlý i s rostoucím množstvím dat a uživatelů."
+                },
+                "item_3": {
+                    "title": "Cachování (ukládání do mezipaměti)",
+                    "text": "Často používaná data se dočasně ukládají do rychlé mezipaměti, díky čemuž systém nemusí opakovaně provádět stejné náročné výpočty."
+                },
+                "item_4": {
+                    "title": "Připraveno na růst",
+                    "text": "Architektura systému je navržena modulárně - lze ji v budoucnu rozšířit o nové funkce nebo přesunout na výkonnější infrastrukturu bez nutnosti stavět systém znovu od základu."
+                }
+            },
+            "support": {
+                "eyebrow": "Po spuštění",
+                "header": "Podpora, aktualizace a údržba",
+                "lead": "Spuštěním projektu naše práce nekončí. Ke každému systému nabízíme dlouhodobou podporu, aby zůstal bezpečný, aktuální a funkční.",
+                "item_1": {
+                    "title": "Pravidelné aktualizace",
+                    "text": "Použité technologie a knihovny pravidelně aktualizujeme, abychom udrželi systém bezpečný a kompatibilní s aktuálními standardy webu."
+                },
+                "item_2": {
+                    "title": "Zálohování dat",
+                    "text": "Data jsou pravidelně zálohována, takže v případě problému lze systém rychle obnovit s minimální ztrátou informací."
+                },
+                "item_3": {
+                    "title": "Technická podpora",
+                    "text": "V případě problému nebo dotazu jsme vám k dispozici - kritické problémy řešíme přednostně, standardní požadavky v rámci dohodnuté doby odezvy."
+                },
+                "item_4": {
+                    "title": "Prostor pro další rozvoj",
+                    "text": "Systém je postaven tak, aby se dal průběžně rozšiřovat o nové funkce podle toho, jak roste vaše podnikání."
+                }
+            }
+        },
+        "glossary": {
+            "eyebrow": "Pro laiky",
+            "header": "Slovníček pojmů",
+            "lead": "Krátké a jednoduché vysvětlení pojmů, na které můžete v naší dokumentaci nebo komunikaci s vývojářským týmem narazit.",
+            "item_1": {
+                "term": "API",
+                "text": "Rozhraní, přes které spolu komunikují dvě části systému - typicky web, který vidíte v prohlížeči, a server, kde jsou uložená data."
+            },
+            "item_2": {
+                "term": "Databáze",
+                "text": "Místo, kde jsou systematicky uložena veškerá data - texty, produkty, objednávky, uživatelské účty a další informace."
+            },
+            "item_3": {
+                "term": "SSL\/HTTPS",
+                "text": "Technologie, která šifruje komunikaci mezi vaším prohlížečem a serverem, takže data nelze cestou odposlechnout. Poznáte ji podle zámečku vedle adresy webu."
+            },
+            "item_4": {
+                "term": "Hosting",
+                "text": "Služba, díky které je váš web „online“ - fyzický server, na kterém systém běží a odkud je dostupný pro návštěvníky z celého světa."
+            },
+            "item_5": {
+                "term": "Administrace \/ CMS",
+                "text": "Přihlašovací sekce, přes kterou spravujete obsah webu nebo e-shopu - texty, produkty, objednávky - bez nutnosti znát programování."
+            },
+            "item_6": {
+                "term": "2FA (dvoufaktorové ověření)",
+                "text": "Bezpečnostní opatření, kdy se kromě hesla vyžaduje ještě druhý ověřovací krok (např. kód z telefonu), aby se do účtu nedostal nikdo cizí, i kdyby znal heslo."
+            },
+            "item_7": {
+                "term": "GDPR",
+                "text": "Evropské nařízení o ochraně osobních údajů, které stanovuje pravidla pro to, jak se smí sbírat, uchovávat a zpracovávat osobní data uživatelů."
+            },
+            "item_8": {
+                "term": "Responzivní design",
+                "text": "Vlastnost webu, díky které se jeho vzhled automaticky přizpůsobí velikosti obrazovky - mobilu, tabletu i počítači."
+            },
+            "item_9": {
+                "term": "Zálohování",
+                "text": "Pravidelné vytváření kopie dat, díky které lze systém v případě problému obnovit do funkčního stavu."
+            },
+            "item_10": {
+                "term": "SSH \/ FTP",
+                "text": "Zabezpečené protokoly, přes které náš tým nahrává aktualizace a soubory na server, aniž by byla ohrožena bezpečnost přenášených dat."
+            }
+        },
+        "cta": {
+            "eyebrow": "Máte další otázky?",
+            "text": "Pokud vám něco není jasné nebo chcete probrat detaily konkrétně pro váš projekt, rádi se s vámi spojíme.",
+            "btn": "Kontaktujte nás"
+        }
+    },
+    "login": {
+        "labels": {
+            "email": "Přihlašovací e-mail",
+            "password": "Heslo"
+        },
+        "placeholders": {
+            "email": "jannovak@studio.cz"
+        },
+        "links": {
+            "forgot_password": "Zapomenuté heslo?",
+            "back_to_home": "Zpět na hlavní stránku"
+        },
+        "aria": {
+            "show_password": "Zobrazit heslo",
+            "hide_password": "Skrýt heslo"
+        },
+        "buttons": {
+            "submit": "Přihlásit se",
+            "submitting": "Přihlašování..."
+        },
+        "errors": {
+            "captcha_required": "Potvrďte prosím, že nejste robot.",
+            "captcha_load": "Nepodařilo se načíst ověření zabezpečení. Zkuste stránku obnovit.",
+            "too_many_attempts": "Příliš mnoho pokusů. Zkuste to prosím za chvíli znovu.",
+            "login_failed": "Přihlášení se nezdařilo.",
+            "verification_failed": "Ověření se nezdařilo. Zkuste to prosím znovu.",
+            "request_failed": "Požadavek se nepodařilo odeslat. Zkuste to prosím znovu."
+        },
+        "otp": {
+            "subtitle": "Na váš e-mail byl odeslán 6místný ověřovací kód.",
+            "valid_for": "Kód je platný ještě",
+            "label": "Ověřovací kód",
+            "placeholder": "123456",
+            "expired": "Platnost kódu vypršela. Vyžádejte si prosím nový.",
+            "verify_btn": "Ověřit a přihlásit",
+            "verifying_btn": "Ověřování...",
+            "resend": "Odeslat nový kód",
+            "back": "← Zpět na přihlášení"
+        },
+        "forgot": {
+            "title": "Obnovení hesla",
+            "subtitle": "Zadejte e-mail spojený s vaším účtem. Pošleme vám odkaz pro obnovení hesla.",
+            "email_label": "E-mailová adresa",
+            "email_placeholder": "vas@email.cz",
+            "sent": "Instrukce byly odeslány na zadaný e-mail.",
+            "cancel": "Zrušit",
+            "submit": "Odeslat instrukce",
+            "close_aria": "Zavřít"
+        }
+    }
+}

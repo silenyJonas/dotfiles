@@ -3,7 +3,8 @@
 
   workspaces.py nav l|r   Super + šipka: fokus na okno vedle; na kraji plochy skok na sousední
                           plochu S OKNY (prázdné uprostřed se přeskočí). Za poslední plochou
-                          (a před první) smí být jedna prázdná, víc ne.
+                          (a před první) smí být jedna prázdná, víc ne. Každý monitor zvlášť:
+                          když vlevo není volné číslo, plochy monitoru se posunou doprava.
   workspaces.py daemon    hlídá Hyprland; když se plocha uprostřed vyprázdní (zavřené / přesunuté
                           okno), posune okna z dalších ploch o jednu doleva, takže díra zmizí.
 """
@@ -15,9 +16,36 @@ import sys
 import time
 
 
+_SOCK = os.path.join(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"), "hypr",
+                     os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""), ".socket.sock")
+
+
+def _request(msg):
+    """Přímo přes socket Hyprlandu (bez spouštění hyprctl): o řád rychlejší, Super+šipky reagují hned."""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        s.connect(_SOCK)
+        s.sendall(msg.encode())
+        chunks = []
+        while True:
+            b = s.recv(65536)
+            if not b:
+                break
+            chunks.append(b)
+        return b"".join(chunks).decode(errors="replace")
+    finally:
+        s.close()
+
+
 def hypr(*args):
-    out = subprocess.run(["hyprctl", *args], capture_output=True, text=True).stdout
-    return out
+    try:
+        if args[:1] == ("-j",):
+            return _request("j/" + args[1])
+        if args[:1] == ("--batch",):
+            return _request("[[BATCH]]" + args[1])
+        return _request(" ".join(args))
+    except OSError:                                        # socket nedostupný: postaru přes hyprctl
+        return subprocess.run(["hyprctl", *args], capture_output=True, text=True).stdout
 
 
 _LUA = None
@@ -111,12 +139,28 @@ def plan_nav(direction, cur, cur_windows, mine, taken):
     left = [i for i in full if i < cur]
     if left:
         return left[-1]
-    if cur_windows == 0 or cur <= 1:
+    if cur_windows == 0:
         return None
     prv = cur - 1                                          # jedna prázdná plocha smí být i na levém kraji
     while prv >= 1 and prv in taken:
         prv -= 1
-    return prv if prv >= 1 else None
+    return prv if prv >= 1 else "shift"                    # žádné volné číslo vlevo: posunout plochy doprava
+
+
+def plan_shift(mine, others):
+    """Uvolnit místo na levém kraji monitoru: každá plocha s okny dostane nejbližší volné vyšší číslo
+    (od nejvyšší, takže pořadí zůstane). others = čísla ploch jiných monitorů. Vrací [(z, do), …]."""
+    full = sorted((i for i, n in mine.items() if n > 0), reverse=True)
+    used = set(others) | set(full)
+    moves = []
+    for i in full:
+        used.discard(i)
+        j = i + 1
+        while j in used:
+            j += 1
+        used.add(j)
+        moves.append((i, j))
+    return moves
 
 
 def nav(direction):
@@ -135,7 +179,19 @@ def nav(direction):
     cur = active.get(mon)
     mine = per.get(mon, {})
     target = plan_nav(direction, cur, mine.get(cur, 0), mine, used_ids(per))
-    if target is not None and target != cur:
+    if target == "shift":
+        others = {i for m, sp in per.items() if m != mon for i in sp}
+        batch = []
+        clients = hj("clients")
+        for src, dst in plan_shift(mine, others):
+            for c in clients:
+                if c["workspace"]["id"] == src:
+                    batch.append("dispatch " + d_move_silent(dst, c["address"]))
+            batch.append("dispatch " + d_ws_to_monitor(dst, mon))
+        batch.append("dispatch " + d_focus_monitor(mon))
+        batch.append("dispatch " + d_workspace(cur))       # původní číslo je teď volné = nová plocha vlevo
+        hypr("--batch", " ; ".join(batch))
+    elif target is not None and target != cur:
         dispatch(d_workspace(target))
 
 
